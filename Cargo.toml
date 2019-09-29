@@ -1,0 +1,16 @@
+[package]
+name = "qbittorrent"
+version = "0.1.0"
+authors = ["VanillaBrooks <brookskarlik@gmail.com>"]
+edition = "2018"
+description = "qbittorrent web api implementation"
+license = "MIT"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = "0.9.20"
+
+serde = {version = "1.0.101", features= ["serde_derive"]}
+serde_json = "1.0.40"
+derive_builder = "0.7.2"
