@@ -24,7 +24,7 @@ pub enum Error {
     MissingCookie,
     SliceError,
 }
-from!{reqwest::header::InvalidHeaderValue, Error::HeaderError}
+from! {reqwest::header::InvalidHeaderValue, Error::HeaderError}
 from! {reqwest::header::ToStrError, Error::ToStringError}
 from! {serde_urlencoded::ser::Error, Error::SerdeUrl}
 from! {serde_json::Error, Error::SerdeJson}

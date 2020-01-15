@@ -3,6 +3,9 @@ use reqwest;
 use std::collections::HashMap;
 
 use derive_builder::Builder;
+
+#[macro_use]
+use derive_builder;
 use serde::{Deserialize, Serialize};
 use serde_json;
 use serde_urlencoded;
@@ -40,13 +43,13 @@ impl Api {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("Referer", address.parse()?);
 
-        let addr = push_own!{address, "/api/v2/auth/login", "?username=", username, "&password=", password};
-        dbg!{&address};
+        let addr = push_own! {address, "/api/v2/auth/login", "?username=", username, "&password=", password};
+        dbg! {&address};
 
         let response = client.get(&addr).headers(headers).send().await?;
 
-        dbg!{response.status()};
-        dbg!{&response.headers()};
+        dbg! {response.status()};
+        dbg! {&response.headers()};
 
         let headers = match response.headers().get("set-cookie") {
             Some(header) => header,
@@ -70,7 +73,6 @@ impl Api {
             address: address.to_string(),
             client,
         })
-
     }
 
     pub async fn application_version(&self) -> Result<String, error::Error> {
@@ -123,64 +125,64 @@ impl Api {
 
     pub async fn default_save_path(&self) -> Result<String, error::Error> {
         let addr = push_own! {self.address, "/api/v2/app/defaultSavePath"};
-        
+
         let mut res = self.client.get(&addr).send().await?;
-        
+
         Ok(res.text().await?)
     }
-    
+
     // ######
     // ###### Logging
     // ######
-    
+
     // Error here
     pub async fn get_log(&self, log_request: &LogRequest) -> Result<Vec<Log>, error::Error> {
         let url = format! {"/api/v2/log/main?{}", log_request.url()};
         let addr = push_own! {self.address, &url};
-        
+
         let res = self.client.get(&addr).send().await?.bytes().await?;
-        
+
         let log: Vec<Log> = serde_json::from_slice(&res)?;
-        
+
         Ok(log)
     }
-    
+
     pub fn get_peer_log(&self) -> Result<Vec<Peer>, error::Error> {
         unimplemented!()
     }
-    
+
     // #####
     // ##### Sync
     // #####
-    
+
     pub fn get_main_data(&self) -> Result<MainData, error::Error> {
         unimplemented!()
     }
-    
+
     // get_torrent_peers is a trait
-    
+
     // #####
     // ##### Transfer Info
     // #####
-    
+
     // /api/v2/transfer/methodName
-    
+
     pub fn get_global_transfer_info(&self) -> Result<(), ()> {
         unimplemented!()
     }
-    
+
     pub fn get_alternate_speed_limits_state(&self) -> Result<(), error::Error> {
         unimplemented!()
     }
-    
-    pub async fn toggle_alternative_speed_limits(&self) -> Result<(), error::Error>{
+
+    pub async fn toggle_alternative_speed_limits(&self) -> Result<(), error::Error> {
         let addr = push_own! {self.address, "/api/v2/transfer/toggleSpeedLimitsMode"};
-        
+
         let res = self.client.get(&addr).send().await?;
 
         match res.error_for_status() {
             Ok(_) => Ok(()),
-            Err(e) => Err(error::Error::from(e))
+            Err(e) => Err(error::Error::from(e)),
         }
     }
 
@@ -214,10 +216,10 @@ impl Api {
         form.insert("cookie", self.cookie.parse()?);
         form.insert("Referer", self.address.parse()?);
 
-        dbg!{&form};
+        dbg! {&form};
 
-        let res = dbg!{self.client.get(&addr).headers(form)}.send().await?;//.bytes().await?;
-        dbg!{res.status()};
+        let res = dbg! {self.client.get(&addr).headers(form)}.send().await?; //.bytes().await?;
+        dbg! {res.status()};
         // dbg!{res.text().await};
         let res = res.bytes().await?;
 
@@ -226,7 +228,80 @@ impl Api {
         Ok(all_torrents)
         // Err(error::Error::MissingCookie)
     }
+
+    pub async fn add_new_torrent(&self, data: &TorrentDownload) -> Result<(), error::Error> {
+        let addr = push_own! {self.address, "/api/v2/torrents/add"};
+
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("cookie", self.cookie.parse()?);
+        headers.insert("Referer", self.address.parse()?);
+
+        let res = self
+            .client
+            .post(&addr)
+            .form(data)
+            .headers(headers)
+            .send()
+            .await?;
+
+        match res.error_for_status() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(error::Error::from(e)),
+        }
+    }
 }
+/// urls 	string 	URLs separated with newlines
+/// torrents 	raw 	Raw data of torrent file. torrents can be presented multiple times.
+/// savepath optional 	string 	Download folder
+/// cookie optional 	string 	Cookie sent to download the .torrent file
+/// category optional 	string 	Category for the torrent
+/// skip_checking optional 	string 	Skip hash checking. Possible values are true, false (default)
+/// paused optional 	string 	Add torrents in the paused state. Possible values are true, false (default)
+/// root_folder optional 	string 	Create the root folder. Possible values are true, false, unset (default)
+/// rename optional 	string 	Rename torrent
+/// upLimit optional 	integer 	Set torrent upload speed limit. Unit in bytes/second
+/// dlLimit optional 	integer 	Set torrent download speed limit. Unit in bytes/second
+/// autoTMM optional 	bool 	Whether Automatic Torrent Management should be used
+/// sequentialDownload optional 	string 	Enable sequential download. Possible values are true, false (default)
+/// firstLastPiecePrio optional 	string 	Prioritize download first last piece. Possible values are true, false (default)
+#[derive(Debug, Clone, Deserialize, Serialize, Builder, Default)]
+#[builder(setter(into, strip_option))]
+pub struct TorrentDownload {
+    #[builder(default)]
+    urls: Option<String>,
+    #[builder(default)]
+    torrents: Option<Vec<u8>>,
+    #[builder(default)]
+    savepath: Option<String>,
+    #[builder(default)]
+    cookie: Option<String>,
+    #[builder(default)]
+    category: Option<String>,
+    #[builder(default)]
+    skip_checking: Option<String>,
+    #[builder(default)]
+    paused: Option<String>,
+    #[builder(default)]
+    root_folder: Option<String>,
+    #[builder(default)]
+    rename: Option<String>,
+    #[builder(default)]
+    #[serde(rename = "upLimit")]
+    upload_limit: Option<i64>,
+    #[builder(default)]
+    #[serde(rename = "dlLimit")]
+    download_limit: Option<i64>,
+    #[builder(default)]
+    #[serde(rename = "autoTMM")]
+    automatic_management: Option<bool>,
+    #[builder(default)]
+    #[serde(rename = "sequentialDownload")]
+    sequential_download: Option<String>,
+    #[builder(default)]
+    #[serde(rename = "firstLastPiecePrio")]
+    first_last_piece_prio: Option<String>,
+}
+
 /// filter optional 	Filter torrent list. Allowed filters: all, downloading, completed, paused, active, inactive, 'resumed'
 /// category optional 	Get torrents with the given category (empty string means "without category"; no "category" parameter means "any category")
 /// sort optional 	Sort torrents by given key. All the possible keys are listed here below
@@ -453,38 +528,42 @@ async fn resume_torrents<'a, T: Into<Hash>>(api: &Api, hashes: T) -> Result<(), 
     let hash = hashes.into();
     let url = hash.url();
     let addr = push_own! {api.address, "/api/v2/torrents/resume", &url};
-    
+
     let res = api.client.get(&addr).send().await?;
 
     match res.error_for_status() {
         Ok(_) => Ok(()),
-        Err(e) => Err(error::Error::from(e))
+        Err(e) => Err(error::Error::from(e)),
     }
 }
 
-#[derive(Deserialize,Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Hash {
     hashes: Vec<String>,
 }
 impl Hash {
-    fn url(&self) -> String{
+    fn url(&self) -> String {
         let mut url = String::with_capacity(self.hashes.len() * 32);
         url.push_str("?hashes=");
         for h in &self.hashes {
             url.push_str(h);
             url.push_str("|")
         }
-        return url[0..url.len()-1].into();
+        return url[0..url.len() - 1].into();
     }
 }
 impl<'a> From<&'a str> for Hash {
     fn from(e: &'a str) -> Hash {
-        return Hash { hashes: vec![e.into()] };
+        return Hash {
+            hashes: vec![e.into()],
+        };
     }
 }
 impl<'a> From<&'a String> for Hash {
     fn from(e: &'a String) -> Hash {
-        return Hash { hashes: vec![e.into()] };
+        return Hash {
+            hashes: vec![e.into()],
+        };
     }
 }
 impl<'a> From<String> for Hash {
@@ -497,9 +576,11 @@ impl From<Vec<String>> for Hash {
         return Hash { hashes: e };
     }
 }
-impl <'a> From<Vec<&'a str>> for Hash {
+impl<'a> From<Vec<&'a str>> for Hash {
     fn from(e: Vec<&'a str>) -> Hash {
-        return Hash { hashes: e.into_iter().map(|x| x.into()).collect() };
+        return Hash {
+            hashes: e.into_iter().map(|x| x.into()).collect(),
+        };
     }
 }
 
@@ -547,7 +628,7 @@ pub enum TrackerStatus {
 }
 
 /// Metadata about a torrent. returned from Torrent::properties()
-/// 
+///
 /// save_path 	string 	Torrent save path
 /// creation_date 	integer 	Torrent creation date (Unix timestamp)
 /// piece_size 	integer 	Torrent piece size (bytes)
