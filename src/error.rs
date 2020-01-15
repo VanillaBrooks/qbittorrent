@@ -19,11 +19,12 @@ pub enum Error {
     ToStringError(reqwest::header::ToStrError),
     SerdeJson(serde_json::Error),
     SerdeUrl(serde_urlencoded::ser::Error),
+    HeaderError(reqwest::header::InvalidHeaderValue),
     MissingHeaders,
     MissingCookie,
     SliceError,
 }
-
+from!{reqwest::header::InvalidHeaderValue, Error::HeaderError}
 from! {reqwest::header::ToStrError, Error::ToStringError}
 from! {serde_urlencoded::ser::Error, Error::SerdeUrl}
 from! {serde_json::Error, Error::SerdeJson}

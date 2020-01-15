@@ -11,7 +11,13 @@ use tokio;
 macro_rules! push_own {
     ($s:ident . $inner:ident, $( $push_val:expr),+) => {
         {
-            let mut save = $s.$inner.clone().to_string();
+            let save = &$s.$inner;
+            push_own!{save, $($push_val),+}
+        }
+    };
+    ($s:ident, $( $push_val:expr),+) => {
+        {
+            let mut save = $s.clone().to_string();
             $(
                 save.push_str($push_val);
             )+
@@ -29,13 +35,18 @@ pub struct Api {
 
 impl Api {
     pub async fn new(username: &str, password: &str, address: &str) -> Result<Self, error::Error> {
-        let mut form = HashMap::new();
-        form.insert("username", username);
-        form.insert("password", password);
-
         let client = reqwest::Client::new();
 
-        let response = client.post(address).form(&form).send().await?;
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("Referer", address.parse()?);
+
+        let addr = push_own!{address, "/api/v2/auth/login", "?username=", username, "&password=", password};
+        dbg!{&address};
+
+        let response = client.get(&addr).headers(headers).send().await?;
+
+        dbg!{response.status()};
+        dbg!{&response.headers()};
 
         let headers = match response.headers().get("set-cookie") {
             Some(header) => header,
@@ -48,6 +59,7 @@ impl Api {
             None => return Err(error::Error::MissingCookie),
         };
 
+        // parse off the "SID=" portion of the cookie
         let cookie = match cookie_str.get(0..cookie_header) {
             Some(cookie) => cookie,
             None => return Err(error::Error::SliceError),
@@ -58,6 +70,7 @@ impl Api {
             address: address.to_string(),
             client,
         })
+
     }
 
     pub async fn application_version(&self) -> Result<String, error::Error> {
@@ -110,52 +123,65 @@ impl Api {
 
     pub async fn default_save_path(&self) -> Result<String, error::Error> {
         let addr = push_own! {self.address, "/api/v2/app/defaultSavePath"};
-
+        
         let mut res = self.client.get(&addr).send().await?;
-
+        
         Ok(res.text().await?)
     }
-
+    
     // ######
     // ###### Logging
     // ######
-
+    
     // Error here
     pub async fn get_log(&self, log_request: &LogRequest) -> Result<Vec<Log>, error::Error> {
         let url = format! {"/api/v2/log/main?{}", log_request.url()};
         let addr = push_own! {self.address, &url};
-
+        
         let res = self.client.get(&addr).send().await?.bytes().await?;
-
+        
         let log: Vec<Log> = serde_json::from_slice(&res)?;
-
+        
         Ok(log)
     }
-
+    
     pub fn get_peer_log(&self) -> Result<Vec<Peer>, error::Error> {
         unimplemented!()
     }
-
+    
     // #####
     // ##### Sync
     // #####
-
+    
     pub fn get_main_data(&self) -> Result<MainData, error::Error> {
         unimplemented!()
     }
-
+    
     // get_torrent_peers is a trait
-
+    
     // #####
     // ##### Transfer Info
     // #####
-
+    
+    // /api/v2/transfer/methodName
+    
     pub fn get_global_transfer_info(&self) -> Result<(), ()> {
         unimplemented!()
     }
-
+    
     pub fn get_alternate_speed_limits_state(&self) -> Result<(), error::Error> {
         unimplemented!()
+    }
+    
+    pub async fn toggle_alternative_speed_limits(&self) -> Result<(), error::Error>{
+        let addr = push_own! {self.address, "/api/v2/transfer/toggleSpeedLimitsMode"};
+        
+        let res = self.client.get(&addr).send().await?;
+
+        match res.error_for_status() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(error::Error::from(e))
+        }
     }
 
     pub fn set_alternate_speed_limits_state(&self) -> Result<(), error::Error> {
@@ -184,11 +210,21 @@ impl Api {
     pub async fn get_torrent_list(&self) -> Result<Vec<Torrent>, error::Error> {
         let addr = push_own! {self.address, "/api/v2/torrents/info"};
 
-        let res = self.client.get(&addr).send().await?.bytes().await?;
+        let mut form = reqwest::header::HeaderMap::new();
+        form.insert("cookie", self.cookie.parse()?);
+        form.insert("Referer", self.address.parse()?);
+
+        dbg!{&form};
+
+        let res = dbg!{self.client.get(&addr).headers(form)}.send().await?;//.bytes().await?;
+        dbg!{res.status()};
+        // dbg!{res.text().await};
+        let res = res.bytes().await?;
 
         let all_torrents: Vec<Torrent> = serde_json::from_slice(&res)?;
 
         Ok(all_torrents)
+        // Err(error::Error::MissingCookie)
     }
 }
 /// filter optional 	Filter torrent list. Allowed filters: all, downloading, completed, paused, active, inactive, 'resumed'
@@ -511,6 +547,7 @@ pub enum TrackerStatus {
 }
 
 /// Metadata about a torrent. returned from Torrent::properties()
+/// 
 /// save_path 	string 	Torrent save path
 /// creation_date 	integer 	Torrent creation date (Unix timestamp)
 /// piece_size 	integer 	Torrent piece size (bytes)
