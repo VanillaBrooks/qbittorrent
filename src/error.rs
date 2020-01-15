@@ -15,61 +15,16 @@ macro_rules! from {
 
 #[derive(Debug)]
 pub enum Error {
-    Authentication(Authentication),
-}
-
-impl From<Authentication> for Error {
-    fn from(e: Authentication) -> Self {
-        Self::Authentication(e)
-    }
-}
-
-type e = reqwest::header::ToStrError;
-
-#[derive(Debug)]
-pub enum Authentication {
-    LoginError(ReqErr),
+    ReqErr(ReqErr),
     ToStringError(reqwest::header::ToStrError),
+    SerdeJson(serde_json::Error),
+    SerdeUrl(serde_urlencoded::ser::Error),
     MissingHeaders,
     MissingCookie,
     SliceError,
 }
 
-from! {ReqErr, Authentication::LoginError}
-from! {reqwest::header::ToStrError, Authentication::ToStringError}
-
-#[derive(Debug)]
-pub enum Application {
-    SendError(ReqErr),
-    SerdeJson(serde_json::Error),
-}
-
-from! {ReqErr, Application::SendError}
-from! {serde_json::Error, Application::SerdeJson}
-
-#[derive(Debug)]
-pub enum Log {
-    SendError(ReqErr),
-    SerdeJson(serde_json::Error),
-}
-
-from! {ReqErr, Log::SendError}
-from! {serde_json::Error, Log::SerdeJson}
-
-
-#[derive(Debug)]
-pub enum SyncError {
-    SendError(ReqErr),
-
-}
-
-from! {ReqErr, SyncError::SendError}
-
-#[derive(Debug)]
-pub enum Transfer {}
-
-
-#[derive(Debug)]
-pub enum TorrentManagement {
-    
-}
+from! {reqwest::header::ToStrError, Error::ToStringError}
+from! {serde_urlencoded::ser::Error, Error::SerdeUrl}
+from! {serde_json::Error, Error::SerdeJson}
+from! {reqwest::Error, Error::ReqErr}
