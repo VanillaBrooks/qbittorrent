@@ -249,7 +249,18 @@ impl Api {
             Err(e) => Err(error::Error::from(e)),
         }
     }
+
+    fn make_headers(&self) -> Result<reqwest::header::HeaderMap, error::Error> {
+        let mut headers = reqwest::header::HeaderMap::new();
+        headers.insert("cookie", self.cookie.parse()?);
+        Ok(headers)
+    }
 }
+
+/// Metadata for downloading magnet links and torrent files
+///
+/// NOTE: You must include either a `urls` field or `torrents` field
+///
 /// urls 	string 	URLs separated with newlines
 /// torrents 	raw 	Raw data of torrent file. torrents can be presented multiple times.
 /// savepath optional 	string 	Download folder
@@ -302,6 +313,12 @@ pub struct TorrentDownload {
     first_last_piece_prio: Option<String>,
 }
 
+impl TorrentDownload {
+    pub async fn download(&self, api: &Api) -> Result<(), error::Error> {
+        api.add_new_torrent(&self).await
+    }
+}
+
 /// filter optional 	Filter torrent list. Allowed filters: all, downloading, completed, paused, active, inactive, 'resumed'
 /// category optional 	Get torrents with the given category (empty string means "without category"; no "category" parameter means "any category")
 /// sort optional 	Sort torrents by given key. All the possible keys are listed here below
@@ -321,8 +338,9 @@ struct TorrentRequest {
 }
 impl TorrentRequest {
     // TODO: swap this to www_url_encoding crate
-    fn url(&self) -> String {
-        unimplemented! {}
+    fn url(&self) -> Result<String, error::Error> {
+        let url = serde_urlencoded::to_string(&self)?;
+        Ok(url)
     }
 }
 
@@ -445,7 +463,7 @@ pub struct MainData {
 #[derive(Debug, Deserialize)]
 pub struct Torrent {
     added_on: u32,
-    amount_left: u32,
+    amount_left: u64,
     auto_tmm: bool,
     category: String,
     completed: u64,
@@ -514,6 +532,7 @@ impl Torrent {
         Ok(trackers)
     }
 
+    // TODO: resuming multiple at once
     pub async fn resume(&self, api: &Api) -> Result<(), error::Error> {
         let _hash = &self.hash;
         let addr = push_own! {api.address, "/api/v2/torrents/trackers?hashes=", _hash};
@@ -522,8 +541,28 @@ impl Torrent {
 
         resume_torrents(&api, &self.hash).await
     }
+
+    /// get contents of each torrent
+    pub async fn contents(&self, api: &Api) -> Result<Vec<TorrentInfo>, error::Error> {
+        let _hash = &self.hash;
+        let addr = push_own! {api.address, "/api/v2/torrents/files?hash=", _hash};
+
+        let res = api
+            .client
+            .get(&addr)
+            .headers(api.make_headers()?)
+            .send()
+            .await?
+            .bytes()
+            .await?;
+
+        let info = serde_json::from_slice(&res)?;
+
+        Ok(info)
+    }
 }
 
+// TODO: make this a trait
 async fn resume_torrents<'a, T: Into<Hash>>(api: &Api, hashes: T) -> Result<(), error::Error> {
     let hash = hashes.into();
     let url = hash.url();
@@ -535,6 +574,25 @@ async fn resume_torrents<'a, T: Into<Hash>>(api: &Api, hashes: T) -> Result<(), 
         Ok(_) => Ok(()),
         Err(e) => Err(error::Error::from(e)),
     }
+}
+/// Container for information about a torrent
+///
+/// name 	string 	File name (including relative path)
+/// size 	integer 	File size (bytes)
+/// progress 	float 	File progress (percentage/100)
+/// priority 	integer 	File priority. See possible values here below
+/// is_seed 	bool 	True if file is seeding/complete
+/// piece_range 	integer array 	The first number is the starting piece index and the second number is the ending piece index (inclusive)
+/// availability 	float 	Percentage of file pieces currently available
+#[derive(Debug, Deserialize, Serialize)]
+pub struct TorrentInfo {
+    name: String,
+    size: i64,
+    progress: f64,
+    priority: i16,
+    is_seed: Option<bool>,
+    piece_range: Vec<i64>,
+    availability: f64,
 }
 
 #[derive(Deserialize, Serialize)]
