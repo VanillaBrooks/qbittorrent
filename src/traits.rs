@@ -16,10 +16,9 @@ pub trait TorrentData<T> {
 pub trait Resume<T> {
     async fn resume(&self, other: &'_ T) -> Result<(), Error>;
 }
-
 #[async_trait]
 pub trait Pause<T> {
-    fn pause(&self, other: &'_ T) -> Result<(), Error>;
+    async fn pause(&self, other: &'_ T) -> Result<(), Error>;
 }
 
 #[async_trait]
@@ -127,6 +126,50 @@ impl Resume<Api> for Vec<Hash> {
         dbg! {&hash_url};
 
         let addr = push_own! {api.address, "/api/v2/torrents/resume?hashes=", &hash_url};
+
+        let res = api.client.get(&addr).send().await?;
+
+        match res.error_for_status() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Error::from(e)),
+        }
+    }
+}
+
+#[async_trait]
+impl Pause<Api> for Hash {
+    async fn pause(&self, api: &'_ Api) -> Result<(), Error> {
+        let _hash = &self.hash;
+        let addr = push_own! {api.address, "/api/v2/pause/pause?hashes=", _hash};
+
+        let res = api.client.get(&addr).send().await?;
+
+        match res.error_for_status() {
+            Ok(_) => Ok(()),
+            Err(e) => Err(Error::from(e)),
+        }
+    }
+}
+
+#[async_trait]
+impl Pause<Api> for Vec<Hash> {
+    async fn pause(&self, api: &'_ Api) -> Result<(), Error> {
+        // concat all hashes together with "|" character separation
+        let mut hash_url = self
+            .iter()
+            .map(|x| {
+                let mut cln = x.hash.clone();
+                cln.push_str("|");
+                cln
+            })
+            .collect::<String>();
+
+        // remove the final | from the string
+        hash_url.remove(hash_url.len() - 1);
+
+        dbg! {&hash_url};
+
+        let addr = push_own! {api.address, "/api/v2/torrents/pause?hashes=", &hash_url};
 
         let res = api.client.get(&addr).send().await?;
 
