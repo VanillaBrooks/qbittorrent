@@ -10,7 +10,6 @@ use serde::{Deserialize, Serialize};
 
 use super::api::Api;
 
-
 /// Getting log information
 #[derive(Debug, Builder, Default)]
 pub struct LogRequest {
@@ -28,12 +27,10 @@ pub struct LogRequest {
 
 // TODO: use serde here instead
 impl LogRequest {
-    pub(crate)fn url(&self) -> String {
+    pub(crate) fn url(&self) -> String {
         format! {"normal={}&info={}&warning={}&critical={}&last_known_id={}", self.normal, self.info, self.warning, self.critical, self.last_known_id}
     }
 }
-
-
 
 /// filter optional 	Filter torrent list. Allowed filters: all, downloading, completed, paused, active, inactive, 'resumed'
 /// category optional 	Get torrents with the given category (empty string means "without category"; no "category" parameter means "any category")

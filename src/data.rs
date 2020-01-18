@@ -70,7 +70,7 @@ pub struct MainData {
 /// uploaded_session 	integer 	Amount of data uploaded this session
 /// upspeed 	integer 	Torrent upload speed (bytes/s)
 
-#[derive(Debug, Deserialize, Getters)]
+#[derive(Debug, Deserialize, Getters, Clone)]
 pub struct Torrent {
     added_on: u32,
     amount_left: u64,
@@ -85,7 +85,7 @@ pub struct Torrent {
     eta: u64,
     f_l_piece_prio: bool,
     force_start: bool,
-    hash: String,
+    pub(crate) hash: Hash,
     last_activity: u64,
     magnet_uri: String,
     max_ratio: f64,
@@ -149,7 +149,8 @@ impl Torrent {
 
         // let res = api.client.get(&addr).send().await?.bytes().await?;
 
-        resume_torrents(&api, &self.hash).await
+        // resume_torrents(&api, &self.hash).await
+        unimplemented!()
     }
 
     /// get contents of each torrent
@@ -171,20 +172,6 @@ impl Torrent {
         Ok(info)
     }
 }
-// TODO: make this A trait + operation on Hash
-async fn resume_torrents<'a, T: Into<Hash>>(api: &Api, hashes: T) -> Result<(), error::Error> {
-    let hash = hashes.into();
-    let url = hash.url();
-    let addr = push_own! {api.address, "/api/v2/torrents/resume", &url};
-
-    let res = api.client.get(&addr).send().await?;
-
-    match res.error_for_status() {
-        Ok(_) => Ok(()),
-        Err(e) => Err(error::Error::from(e)),
-    }
-}
-
 
 /// Trackers associated with a torrent
 ///
@@ -326,7 +313,7 @@ pub struct TorrentProperties {
 /// checkingResumeData 	Checking resume data on qBt startup
 /// moving 	Torrent is moving to another location
 /// unknown 	Unknown status
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Clone)]
 pub enum State {
     #[serde(rename = "error")]
     Error,
@@ -369,7 +356,7 @@ pub enum State {
 }
 
 /// Transfer stats for a torrent
-/// 
+///
 /// dl_info_speed 	integer 	Global download rate (bytes/s)
 /// dl_info_data 	integer 	Data downloaded this session (bytes)
 /// up_info_speed 	integer 	Global upload rate (bytes/s)
@@ -378,7 +365,7 @@ pub enum State {
 /// up_rate_limit 	integer 	Upload rate limit (bytes/s)
 /// dht_nodes 	integer 	DHT nodes connected to
 /// connection_status 	string 	Connection status. See possible values here below
-#[derive(Debug, Deserialize,Getters)]
+#[derive(Debug, Deserialize, Getters)]
 pub struct TransferInfo {
     dl_info_speed: u64,
     dl_info_data: u64,
@@ -413,7 +400,7 @@ pub enum ConnectionStatus {
 /// is_seed 	bool 	True if file is seeding/complete
 /// piece_range 	integer array 	The first number is the starting piece index and the second number is the ending piece index (inclusive)
 /// availability 	float 	Percentage of file pieces currently available
-#[derive(Debug, Deserialize, Serialize,Getters)]
+#[derive(Debug, Deserialize, Serialize, Getters)]
 pub struct TorrentInfo {
     name: String,
     size: i64,
@@ -423,7 +410,6 @@ pub struct TorrentInfo {
     piece_range: Vec<i64>,
     availability: f64,
 }
-
 
 #[derive(Debug, Deserialize)]
 pub struct Categories {}
@@ -454,51 +440,21 @@ pub struct Log {
     r#type: u64,
 }
 
-
-// FIXME: bad api here
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
+#[serde(transparent)]
 pub struct Hash {
-    hashes: Vec<String>,
+    pub(crate) hash: String,
 }
-impl Hash {
-    fn url(&self) -> String {
-        let mut url = String::with_capacity(self.hashes.len() * 32);
-        url.push_str("?hashes=");
-        for h in &self.hashes {
-            url.push_str(h);
-            url.push_str("|")
-        }
-        return url[0..url.len() - 1].into();
+
+impl From<String> for Hash {
+    fn from(f: String) -> Self {
+        Hash { hash: f }
     }
 }
-impl<'a> From<&'a str> for Hash {
-    fn from(e: &'a str) -> Hash {
-        return Hash {
-            hashes: vec![e.into()],
-        };
-    }
-}
-impl<'a> From<&'a String> for Hash {
-    fn from(e: &'a String) -> Hash {
-        return Hash {
-            hashes: vec![e.into()],
-        };
-    }
-}
-impl<'a> From<String> for Hash {
-    fn from(e: String) -> Hash {
-        return Hash { hashes: vec![e] };
-    }
-}
-impl From<Vec<String>> for Hash {
-    fn from(e: Vec<String>) -> Hash {
-        return Hash { hashes: e };
-    }
-}
-impl<'a> From<Vec<&'a str>> for Hash {
-    fn from(e: Vec<&'a str>) -> Hash {
-        return Hash {
-            hashes: e.into_iter().map(|x| x.into()).collect(),
-        };
+
+impl std::ops::Deref for Hash {
+    type Target = String;
+    fn deref(&self) -> &Self::Target {
+        &self.hash
     }
 }

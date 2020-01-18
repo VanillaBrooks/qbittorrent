@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 
 // TODO: fix these to specifics
+use super::data::*;
 use super::error;
 use super::queries::*;
-use super::data::*;
 
 #[derive(Debug)]
 pub struct Api {
@@ -234,15 +234,3 @@ impl Api {
         Ok(headers)
     }
 }
-
-
-pub trait GetTorrentPeers {
-    // still TODO in the api
-    // should be impl'd for anyone who owns a torrent info hash
-    fn get_torrent_peers(&self) -> ();
-}
-
-pub trait BanPeer {
-    fn ban_peer(&self) -> ();
-}
-

@@ -2,6 +2,8 @@
 pub(crate) mod macros;
 
 pub mod api;
-pub mod error;
 pub mod data;
+pub mod error;
 pub mod queries;
+pub mod tests;
+pub mod traits;

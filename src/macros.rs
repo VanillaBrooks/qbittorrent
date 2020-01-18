@@ -1,5 +1,5 @@
 // A helper macro for joining multiple strings together
-#[macro_export]
+// #[macro_export]
 macro_rules! push_own {
     // catch self.var pattern
     ($s:ident . $inner:ident, $( $push_val:expr),+) => {
