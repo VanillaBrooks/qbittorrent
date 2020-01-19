@@ -18,4 +18,12 @@ macro_rules! push_own {
             save
         }
     };
+    // for preallocated strings
+    (prealloc; $save_alloc:ident, $($push_val:expr),+) => {
+        {
+            $(
+                $save_alloc.push_str($push_val);
+            )+
+        }
+    };
 }

@@ -190,21 +190,14 @@ impl Api {
     pub async fn get_torrent_list(&self) -> Result<Vec<Torrent>, error::Error> {
         let addr = push_own! {self.address, "/api/v2/torrents/info"};
 
-        let mut form = reqwest::header::HeaderMap::new();
-        form.insert("cookie", self.cookie.parse()?);
-        form.insert("Referer", self.address.parse()?);
-
-        dbg! {&form};
-
-        let res = dbg! {self.client.get(&addr).headers(form)}.send().await?; //.bytes().await?;
-        dbg! {res.status()};
-        // dbg!{res.text().await};
+        let res = dbg! {self.client.get(&addr).headers(self.make_headers()?)}
+            .send()
+            .await?; //.bytes().await?;
         let res = res.bytes().await?;
 
         let all_torrents: Vec<Torrent> = serde_json::from_slice(&res)?;
 
         Ok(all_torrents)
-        // Err(error::Error::MissingCookie)
     }
 
     pub async fn add_new_torrent(&self, data: &TorrentDownload) -> Result<(), error::Error> {
@@ -228,6 +221,7 @@ impl Api {
         }
     }
 
+    /// Make the authentication headers for each request
     pub(crate) fn make_headers(&self) -> Result<reqwest::header::HeaderMap, error::Error> {
         let mut headers = reqwest::header::HeaderMap::new();
         headers.insert("cookie", self.cookie.parse()?);

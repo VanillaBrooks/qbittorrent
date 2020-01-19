@@ -1,5 +1,6 @@
 #[macro_use]
 pub(crate) mod macros;
+pub(crate) mod utils;
 
 pub mod api;
 pub mod data;

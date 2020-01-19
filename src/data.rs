@@ -6,6 +6,7 @@ use serde_json;
 use serde_urlencoded;
 
 use super::api::Api;
+use super::utils;
 
 use derive_getters::Getters;
 
@@ -154,7 +155,7 @@ impl Torrent {
     }
 
     /// get contents of each torrent
-    pub async fn contents(&self, api: &Api) -> Result<Vec<TorrentInfo>, error::Error> {
+    pub async fn contents(&'_ self, api: &Api) -> Result<Vec<TorrentInfo<'_>>, error::Error> {
         let _hash = &self.hash;
         let addr = push_own! {api.address, "/api/v2/torrents/files?hash=", _hash};
 
@@ -167,7 +168,10 @@ impl Torrent {
             .bytes()
             .await?;
 
-        let info = serde_json::from_slice(&res)?;
+        let info = serde_json::from_slice::<Vec<TorrentInfoSerde>>(&res)?
+            .into_iter()
+            .map(|x| x.into_info(&self.hash))
+            .collect();
 
         Ok(info)
     }
@@ -400,8 +404,33 @@ pub enum ConnectionStatus {
 /// is_seed 	bool 	True if file is seeding/complete
 /// piece_range 	integer array 	The first number is the starting piece index and the second number is the ending piece index (inclusive)
 /// availability 	float 	Percentage of file pieces currently available
-#[derive(Debug, Deserialize, Serialize, Getters)]
-pub struct TorrentInfo {
+#[derive(Debug, Deserialize, Serialize)]
+pub(crate) struct TorrentInfoSerde {
+    name: String,
+    size: i64,
+    progress: f64,
+    priority: i16,
+    is_seed: Option<bool>,
+    piece_range: Vec<i64>,
+    availability: f64,
+}
+impl<'a> TorrentInfoSerde {
+    pub fn into_info(self, hash: &'a Hash) -> TorrentInfo<'a> {
+        TorrentInfo {
+            hash,
+            name: self.name,
+            size: self.size,
+            progress: self.progress,
+            priority: self.priority,
+            is_seed: self.is_seed,
+            piece_range: self.piece_range,
+            availability: self.availability,
+        }
+    }
+}
+#[derive(Debug, Serialize, Getters)]
+pub struct TorrentInfo<'a> {
+    hash: &'a Hash,
     name: String,
     size: i64,
     progress: f64,
@@ -440,7 +469,7 @@ pub struct Log {
     r#type: u64,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 #[serde(transparent)]
 pub struct Hash {
     pub(crate) hash: String,
@@ -456,5 +485,24 @@ impl std::ops::Deref for Hash {
     type Target = String;
     fn deref(&self) -> &Self::Target {
         &self.hash
+    }
+}
+
+#[derive(Debug, Serialize, Clone)]
+pub(crate) struct SerdeHashes<T: Serialize> {
+    pub(crate) hashes: T,
+}
+
+impl<'a> From<&'a Hash> for SerdeHashes<&'a String> {
+    fn from(e: &'a Hash) -> Self {
+        SerdeHashes { hashes: e }
+    }
+}
+
+impl<'a> From<&'a Vec<Hash>> for SerdeHashes<String> {
+    fn from(hashes: &'a Vec<Hash>) -> Self {
+        Self {
+            hashes: utils::QueryConcat::query_concat(&hashes.as_slice(), '|'),
+        }
     }
 }
