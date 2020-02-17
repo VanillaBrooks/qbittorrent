@@ -18,3 +18,4 @@ tokio = {version=  "0.2.9", features=["macros"]}
 serde_urlencoded = "0.6.1"
 derive-getters = "0.1.0"
 async-trait = "0.1.22"
+thiserror = "1.0.11"

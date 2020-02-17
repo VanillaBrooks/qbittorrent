@@ -1,31 +1,24 @@
 use reqwest;
 use serde_json;
 
-type ReqErr = reqwest::Error;
+use thiserror::Error as ThisError;
 
-macro_rules! from {
-    ($root:path, $destination_enum:ident :: $path_:ident) => {
-        impl From<$root> for $destination_enum {
-            fn from(e: $root) -> Self {
-                $destination_enum::$path_(e)
-            }
-        }
-    };
-}
-
-#[derive(Debug)]
+#[derive(ThisError,Debug)]
 pub enum Error {
-    ReqErr(ReqErr),
-    ToStringError(reqwest::header::ToStrError),
-    SerdeJson(serde_json::Error),
-    SerdeUrl(serde_urlencoded::ser::Error),
-    HeaderError(reqwest::header::InvalidHeaderValue),
+    #[error("Request Error when talking to qbittorrent: {0}")]
+    ReqErr(#[from] reqwest::Error),
+    #[error("Could not convert reqwest header to string: {0}")]
+    ToStringError(#[from] reqwest::header::ToStrError),
+    #[error("Serde json could not correctly deserialize: {0}")]
+    SerdeJson(#[from] serde_json::Error),
+    #[error("Serde_urlencoded could not serialize the url: {0}")]
+    SerdeUrl(#[from] serde_urlencoded::ser::Error),
+    #[error("Header value was malformed: {0}")]
+    HeaderError(#[from] reqwest::header::InvalidHeaderValue),
+    #[error("Header value was not correctly set")]
     MissingHeaders,
+    #[error("Cookie value was not correctly set")]
     MissingCookie,
+    #[error("SLICE ERROR ??")]
     SliceError,
 }
-from! {reqwest::header::InvalidHeaderValue, Error::HeaderError}
-from! {reqwest::header::ToStrError, Error::ToStringError}
-from! {serde_urlencoded::ser::Error, Error::SerdeUrl}
-from! {serde_json::Error, Error::SerdeJson}
-from! {reqwest::Error, Error::ReqErr}
