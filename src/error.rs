@@ -3,7 +3,7 @@ use serde_json;
 
 use thiserror::Error as ThisError;
 
-#[derive(ThisError,Debug)]
+#[derive(ThisError, Debug)]
 pub enum Error {
     #[error("Request Error when talking to qbittorrent: {0}")]
     ReqErr(#[from] reqwest::Error),

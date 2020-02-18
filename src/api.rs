@@ -192,8 +192,9 @@ impl Api {
 
         let res = dbg! {self.client.get(&addr).headers(self.make_headers()?)}
             .send()
-            .await?; //.bytes().await?;
-        let res = res.bytes().await?;
+            .await?
+            .bytes()
+            .await?;
 
         let all_torrents: Vec<Torrent> = serde_json::from_slice(&res)?;
 

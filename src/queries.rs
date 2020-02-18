@@ -1,4 +1,5 @@
-use super::error;
+use super::data::{Hash, Torrent};
+use super::error::{self, Error};
 use reqwest;
 use std::collections::HashMap;
 
@@ -39,15 +40,25 @@ impl LogRequest {
 /// limit optional 	Limit the number of torrents returned
 /// offset optional 	Set offset (if less than 0, offset from end)
 /// hashes optional 	Filter by hashes. Can contain multiple hashes separated by |
-#[derive(Debug, Builder, Serialize, Deserialize, Clone)]
-struct TorrentRequest {
+#[derive(Debug, Builder, Serialize, Deserialize, Clone, Default)]
+#[builder(setter(into, strip_option))]
+pub struct TorrentRequest {
+    #[builder(default)]
     filter: Option<TorrentFilter>,
+    #[builder(default)]
     category: Option<String>,
+    #[builder(default)]
     sort: Option<String>,
+    #[builder(default)]
     reverse: Option<bool>,
+    #[builder(default)]
     limit: Option<u64>,
+    #[builder(default)]
     offset: Option<i64>,
-    hashes: Option<Vec<String>>,
+    #[builder(default)]
+    #[serde(rename = "hashes")]
+    // Api says this could be a vec, makes things annoying on this side
+    hash: Option<Hash>,
 }
 impl TorrentRequest {
     // TODO: swap this to www_url_encoding crate
@@ -55,10 +66,38 @@ impl TorrentRequest {
         let url = serde_urlencoded::to_string(&self)?;
         Ok(url)
     }
+    pub async fn send(self, api: &Api) -> Result<Vec<Torrent>, Error> {
+        let mut addr = push_own!(api.address, "/api/v2/torrents/info");
+
+        match self.url() {
+            Ok(addition) => {
+                if addition != "".to_string() {
+                    addr.push('?');
+                    addr.push_str(&addition);
+                }
+            }
+            Err(e) => return Err(Error::from(e)),
+        }
+
+        dbg! {&addr};
+
+        let res = api
+            .client
+            .get(&addr)
+            .headers(api.make_headers()?)
+            .send()
+            .await?
+            .bytes()
+            .await?;
+
+        let torrents: Vec<Torrent> = serde_json::from_slice(&res)?;
+
+        Ok(torrents)
+    }
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
-enum TorrentFilter {
+pub enum TorrentFilter {
     #[serde(rename = "all")]
     All,
     #[serde(rename = "downloading")]
@@ -69,6 +108,12 @@ enum TorrentFilter {
     Paused,
     #[serde(rename = "active")]
     Active,
+}
+
+impl Default for TorrentFilter {
+    fn default() -> Self {
+        Self::All
+    }
 }
 
 /// Metadata for downloading magnet links and torrent files

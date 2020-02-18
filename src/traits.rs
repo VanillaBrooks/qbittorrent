@@ -36,8 +36,70 @@ pub trait Tags<T, V: ?Sized> {
 #[async_trait]
 impl TorrentData<Api> for Torrent {
     async fn properties(&self, api: &'_ Api) -> Result<TorrentProperties, Error> {
+        // let _hash = &self.hash;
+        // let addr = push_own! {api.address, "/api/v2/torrents/properties?hash=", _hash};
+
+        // let res = api
+        //     .client
+        //     .get(&addr)
+        //     .headers(api.make_headers()?)
+        //     .send()
+        //     .await?
+        //     .bytes()
+        //     .await?;
+
+        // let props = serde_json::from_slice(&res)?;
+        // Ok(props)
+        self.hash.properties(&api).await
+    }
+
+    async fn trackers(&self, api: &'_ Api) -> Result<Vec<Tracker>, Error> {
+        // let _hash = &self.hash;
+        // let addr = push_own! {api.address, "/api/v2/torrents/trackers?hash=", _hash};
+
+        // let res = api
+        //     .client
+        //     .get(&addr)
+        //     .headers(api.make_headers()?)
+        //     .send()
+        //     .await?
+        //     .bytes()
+        //     .await?;
+
+        // let trackers = serde_json::from_slice(&res)?;
+        // Ok(trackers)
+
+        self.hash.trackers(api).await
+    }
+
+    async fn contents<'a>(&'a self, api: &'a Api) -> Result<Vec<TorrentInfo<'a>>, Error> {
+        self.hash.contents(api).await
+        // let _hash = &self.hash;
+        // let addr = push_own! {api.address, "/api/v2/torrents/files?hash=", _hash};
+
+        // let res = api
+        //     .client
+        //     .get(&addr)
+        //     .headers(api.make_headers()?)
+        //     .send()
+        //     .await?
+        //     .bytes()
+        //     .await?;
+
+        // let info = serde_json::from_slice::<Vec<TorrentInfoSerde>>(&res)?
+        //     .into_iter()
+        //     .map(|x| x.into_info(&self.hash))
+        //     .collect();
+
+        // Ok(info)
+    }
+}
+
+#[async_trait]
+impl TorrentData<Api> for Hash {
+    async fn properties(&self, api: &'_ Api) -> Result<TorrentProperties, Error> {
         let _hash = &self.hash;
-        let addr = push_own! {api.address, "/api/v2/torrents/properties?hash=", _hash};
+        let addr = push_own! {api.address, "/api/v2/torrents/properties?hash=", self};
 
         let res = api
             .client
@@ -53,8 +115,7 @@ impl TorrentData<Api> for Torrent {
     }
 
     async fn trackers(&self, api: &'_ Api) -> Result<Vec<Tracker>, Error> {
-        let _hash = &self.hash;
-        let addr = push_own! {api.address, "/api/v2/torrents/trackers?hash=", _hash};
+        let addr = push_own! {api.address, "/api/v2/torrents/trackers?hash=", self};
 
         let res = api
             .client
@@ -70,8 +131,8 @@ impl TorrentData<Api> for Torrent {
     }
 
     async fn contents<'a>(&'a self, api: &'a Api) -> Result<Vec<TorrentInfo<'a>>, Error> {
-        let _hash = &self.hash;
-        let addr = push_own! {api.address, "/api/v2/torrents/files?hash=", _hash};
+        // let _hash = &self.hash;
+        let addr = push_own! {api.address, "/api/v2/torrents/files?hash=", self};
 
         let res = api
             .client
@@ -84,7 +145,7 @@ impl TorrentData<Api> for Torrent {
 
         let info = serde_json::from_slice::<Vec<TorrentInfoSerde>>(&res)?
             .into_iter()
-            .map(|x| x.into_info(&self.hash))
+            .map(|x| x.into_info(self))
             .collect();
 
         Ok(info)
@@ -94,15 +155,15 @@ impl TorrentData<Api> for Torrent {
 #[async_trait]
 impl TorrentData<Torrent> for Api {
     async fn properties(&self, torrent: &'_ Torrent) -> Result<TorrentProperties, Error> {
-        torrent.properties(&self).await
+        torrent.hash.properties(&self).await
     }
 
     async fn trackers(&self, torrent: &'_ Torrent) -> Result<Vec<Tracker>, Error> {
-        torrent.trackers(&self).await
+        torrent.hash.trackers(&self).await
     }
 
     async fn contents<'a>(&'a self, torrent: &'a Torrent) -> Result<Vec<TorrentInfo<'a>>, Error> {
-        torrent.contents(&self).await
+        torrent.hash.contents(&self).await
     }
 }
 
@@ -167,7 +228,7 @@ impl Pause<Api> for Torrent {
 impl Pause<Api> for Hash {
     async fn pause(&self, api: &'_ Api) -> Result<(), Error> {
         let _hash = &self.hash;
-        let addr = push_own! {api.address, "/api/v2/pause/pause?hashes=", _hash};
+        let addr = push_own! {api.address, "/api/v2/torrents/pause?hashes=", _hash};
 
         let res = api
             .client
@@ -218,11 +279,11 @@ impl Pause<Api> for Vec<Hash> {
 }
 
 #[derive(Serialize)]
-struct TagsUrlHelper<'hash,'tag> {
+struct TagsUrlHelper<'hash, 'tag> {
     hashes: &'hash [&'hash Hash],
-    tags: &'tag [String]
+    tags: &'tag [String],
 }
-impl <'hash, 'tag>TagsUrlHelper<'hash, 'tag> {
+impl<'hash, 'tag> TagsUrlHelper<'hash, 'tag> {
     fn url(self) -> Result<String, Error> {
         let mut url = String::with_capacity(25);
         let hashes = QueryConcat::query_concat(self.hashes, '|');
@@ -237,7 +298,7 @@ impl <'hash, 'tag>TagsUrlHelper<'hash, 'tag> {
 #[async_trait]
 impl Tags<Api, [String]> for Torrent {
     async fn add_tag(&self, api: &'_ Api, tags: &'_ [String]) -> Result<(), Error> {
-        dbg!{"HERERERER 1111"};
+        dbg! {"HERERERER 1111"};
         self.hash.add_tag(&api, tags).await
     }
 }
@@ -247,19 +308,19 @@ impl Tags<Api, [String]> for Hash {
     async fn add_tag(&self, api: &'_ Api, tags: &'_ [String]) -> Result<(), Error> {
         let helper = TagsUrlHelper {
             hashes: &[self],
-            tags: tags
+            tags: tags,
         };
         let addr = push_own! {api.address, "/api/v2/torrents/addTags?", &helper.url()?};
 
-        dbg!{"HERERERE 222"};
-        
-        let res = api   
+        dbg! {"HERERERE 222"};
+
+        let res = api
             .client
             .post(&addr)
             .headers(api.make_headers()?)
             .send()
             .await;
-        dbg!{&res};
+        dbg! {&res};
 
         match res?.error_for_status() {
             Ok(_) => Ok(()),
@@ -280,7 +341,7 @@ impl Tags<Api, [String]> for Vec<Hash> {
         //         "tags" : _tags
         //     }
         // };
-        
+
         // dbg!{&form};
 
         // let res = api

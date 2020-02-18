@@ -77,13 +77,13 @@ pub struct Torrent {
     amount_left: u64,
     auto_tmm: bool,
     category: String,
-    completed: u64,
+    completed: i64,
     completion_on: u32,
     dl_limit: i64,
-    dlspeed: u64,
-    downloaded: u64,
-    downloaded_session: u64,
-    eta: u64,
+    dlspeed: i64,
+    downloaded: i64,
+    downloaded_session: i64,
+    eta: i64,
     f_l_piece_prio: bool,
     force_start: bool,
     pub(crate) hash: Hash,
@@ -92,89 +92,29 @@ pub struct Torrent {
     max_ratio: f64,
     max_seeding_time: i64,
     name: String,
-    num_complete: u64,
-    num_incomplete: u64,
-    num_leechs: u64,
-    num_seeds: u64,
+    num_complete: i64,
+    num_incomplete: i64,
+    num_leechs: i64,
+    num_seeds: i64,
     priority: i64,
     progress: f64,
     ratio: f64,
     ratio_limit: f64,
     save_path: String,
     seeding_time_limit: i64,
-    seen_complete: u64,
+    seen_complete: i64,
     seq_dl: bool,
-    size: u64,
+    size: i64,
     state: State,
     super_seeding: bool,
     tags: String,
-    time_active: u64,
-    total_size: u64,
+    time_active: i64,
+    total_size: i64,
     tracker: String,
     up_limit: i64,
-    uploaded: u64,
-    uploaded_session: u64,
-    upspeed: u64,
-}
-
-impl Torrent {
-    /// Corresponds to get_torrent_generic_properties in qbit documentation
-    pub async fn properties(&self, api: &Api) -> Result<TorrentProperties, error::Error> {
-        let _hash = &self.hash;
-        let addr = push_own! {api.address, "/api/v2/torrents/properties?hash=", _hash};
-        dbg! {&addr};
-
-        // let res = api.client.get(&addr).send().await?.bytes().await?;
-        let res = api.client.get(&addr).send().await?.bytes().await?;
-
-        let props = serde_json::from_slice(&res)?;
-        Ok(props)
-    }
-
-    pub async fn trackers(&self, api: &Api) -> Result<Vec<Tracker>, error::Error> {
-        let _hash = &self.hash;
-        let addr = push_own! {api.address, "/api/v2/torrents/trackers?hash=", _hash};
-
-        let res = api.client.get(&addr).send().await?.bytes().await?;
-
-        // dbg1{}
-
-        let trackers = serde_json::from_slice(&res)?;
-        Ok(trackers)
-    }
-
-    // TODO: resuming multiple at once
-    pub async fn resume(&self, api: &Api) -> Result<(), error::Error> {
-        let _hash = &self.hash;
-        let addr = push_own! {api.address, "/api/v2/torrents/trackers?hashes=", _hash};
-
-        // let res = api.client.get(&addr).send().await?.bytes().await?;
-
-        // resume_torrents(&api, &self.hash).await
-        unimplemented!()
-    }
-
-    /// get contents of each torrent
-    pub async fn contents(&'_ self, api: &Api) -> Result<Vec<TorrentInfo<'_>>, error::Error> {
-        let _hash = &self.hash;
-        let addr = push_own! {api.address, "/api/v2/torrents/files?hash=", _hash};
-
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?
-            .bytes()
-            .await?;
-
-        let info = serde_json::from_slice::<Vec<TorrentInfoSerde>>(&res)?
-            .into_iter()
-            .map(|x| x.into_info(&self.hash))
-            .collect();
-
-        Ok(info)
-    }
+    uploaded: i64,
+    uploaded_session: i64,
+    upspeed: i64,
 }
 
 /// Trackers associated with a torrent
@@ -191,26 +131,27 @@ impl Torrent {
 pub struct Tracker {
     url: String,
     #[getter(skip)]
-    status: u8,
+    status: String,
     // TODO: fix this since some people do things non standard with "/" here
     // tier: u32,
     num_peers: i32,
-    num_seeds: i32,
-    num_leeches: i32,
-    num_downloaded: i64,
+    // TODO: documentation says these will be returned but the fields do not appear
+    // num_seeds: i32,
+    // num_leeches: i32,
+    // num_downloaded: i64,
     msg: String,
 }
 impl Tracker {
-    pub fn status(&self) -> TrackerStatus {
-        match self.status {
-            0 => TrackerStatus::TrackerDisabled,
-            1 => TrackerStatus::NotContacted,
-            2 => TrackerStatus::Working,
-            3 => TrackerStatus::Updating,
-            4 => TrackerStatus::NotWorking,
-            _ => TrackerStatus::UnknownResponse,
-        }
-    }
+    // pub fn status(&self) -> TrackerStatus {
+    //     match self.status {
+    //         0 => TrackerStatus::TrackerDisabled,
+    //         1 => TrackerStatus::NotContacted,
+    //         2 => TrackerStatus::Working,
+    //         3 => TrackerStatus::Updating,
+    //         4 => TrackerStatus::NotWorking,
+    //         _ => TrackerStatus::UnknownResponse,
+    //     }
+    // }
 }
 
 /// Working-status tracker for a particular torrent

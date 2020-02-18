@@ -8,3 +8,5 @@ pub mod error;
 pub mod queries;
 pub mod tests;
 pub mod traits;
+
+pub use api::Api;

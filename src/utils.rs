@@ -5,19 +5,19 @@ pub trait QueryConcat {
 }
 
 impl QueryConcat for Hash {
-    fn query_concat(&self, sep:char) -> String {
+    fn query_concat(&self, sep: char) -> String {
         return self.hash.to_string();
     }
 }
 
 impl QueryConcat for &str {
-    fn query_concat(&self, sep:char) -> String {
+    fn query_concat(&self, sep: char) -> String {
         return self.to_string();
     }
 }
 
 impl QueryConcat for &[String] {
-    fn query_concat(&self, sep:char) -> String {
+    fn query_concat(&self, sep: char) -> String {
         let mut hash_url = self
             .iter()
             .map(|x| {
@@ -34,7 +34,7 @@ impl QueryConcat for &[String] {
 }
 
 impl QueryConcat for &[Hash] {
-    fn query_concat(&self, sep:char) -> String {
+    fn query_concat(&self, sep: char) -> String {
         let mut hash_url = self
             .iter()
             .map(|x| {
@@ -51,7 +51,7 @@ impl QueryConcat for &[Hash] {
 }
 
 impl QueryConcat for [&Hash] {
-    fn query_concat(&self, sep:char) -> String {
+    fn query_concat(&self, sep: char) -> String {
         let mut hash_url = self
             .iter()
             .map(|x| {
