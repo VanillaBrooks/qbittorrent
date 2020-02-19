@@ -1,13 +1,7 @@
 //! Structs returned by api queries
 
-use super::error;
 use serde::{Deserialize, Serialize};
-use serde_json;
-use serde_urlencoded;
-
-use super::api::Api;
 use super::utils;
-
 use derive_getters::Getters;
 
 /// Overall metadata about this qbit client
@@ -84,7 +78,8 @@ pub struct Torrent {
     downloaded: i64,
     downloaded_session: i64,
     eta: i64,
-    f_l_piece_prio: bool,
+    // will sometimes error if this is not option
+    f_l_piece_prio: Option<bool>,
     force_start: bool,
     pub(crate) hash: Hash,
     last_activity: u64,

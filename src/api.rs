@@ -1,5 +1,4 @@
 use reqwest;
-use serde::{Deserialize, Serialize};
 use serde_json;
 
 // TODO: fix these to specifics
@@ -22,12 +21,7 @@ impl Api {
         headers.insert("Referer", address.parse()?);
 
         let addr = push_own! {address, "/api/v2/auth/login", "?username=", username, "&password=", password};
-        dbg! {&address};
-
         let response = client.get(&addr).headers(headers).send().await?;
-
-        dbg! {response.status()};
-        dbg! {&response.headers()};
 
         let headers = match response.headers().get("set-cookie") {
             Some(header) => header,
@@ -81,7 +75,7 @@ impl Api {
     pub async fn shutdown(&self) -> Result<(), error::Error> {
         let addr = push_own! {self.address, "/api/v2/app/shutdown"};
 
-        let res = self.client.get(&addr).send().await?;
+        self.client.get(&addr).send().await?;
 
         Ok(())
     }
@@ -104,7 +98,7 @@ impl Api {
     pub async fn default_save_path(&self) -> Result<String, error::Error> {
         let addr = push_own! {self.address, "/api/v2/app/defaultSavePath"};
 
-        let mut res = self.client.get(&addr).send().await?;
+        let res = self.client.get(&addr).send().await?;
 
         Ok(res.text().await?)
     }
@@ -190,7 +184,10 @@ impl Api {
     pub async fn get_torrent_list(&self) -> Result<Vec<Torrent>, error::Error> {
         let addr = push_own! {self.address, "/api/v2/torrents/info"};
 
-        let res = dbg! {self.client.get(&addr).headers(self.make_headers()?)}
+        let res = self
+            .client
+            .get(&addr)
+            .headers(self.make_headers()?)
             .send()
             .await?
             .bytes()

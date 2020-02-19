@@ -1,8 +1,6 @@
 use super::api::Api;
 use super::data;
 use super::error::Error;
-use super::queries;
-use super::traits::*;
 use tokio;
 
 fn _is_send<T: Send>(_: T) {}
@@ -19,7 +17,6 @@ async fn is_sync() {
     _is_sync(api);
 }
 
-// references versions
 #[tokio::test]
 async fn is_send_ref() {
     let api = Api::new("", "", "").await;
@@ -71,8 +68,9 @@ async fn add_new_torrent() {
 
     let download = queries::TorrentDownloadBuilder::default()
         .urls(magnet)
-        .savepath("E:\\")
+        .savepath("E:\\Torrents")
         .upload_limit(300)
+        .category("TEST_CAT")
         .sequential_download("true")
         .download_limit(200)
         .build()
@@ -105,11 +103,23 @@ async fn trackers() {
 
 #[tokio::test]
 async fn contents() {
-    let (api, torrent) = get_first_torrent().await;
+    let api = default_api().await.unwrap();
+    let torrents = queries::TorrentRequestBuilder::default()
+        .filter(queries::TorrentFilter::Completed)
+        .build()
+        .unwrap()
+        .send(&api)
+        .await
+        .unwrap()
+        .remove(0);
 
-    let contents = torrent.contents(&api).await;
+    dbg! {&torrents};
+
+    let contents = torrents.contents(&api).await;
+
     dbg! {&contents};
-    contents.expect("could not unwrap contents");
+
+    contents.unwrap();
 }
 
 #[tokio::test]
@@ -145,6 +155,7 @@ async fn test_pause() {
     // sleep to give time to pause
     tokio::time::delay_for(std::time::Duration::from_secs(3)).await;
 
+    // search through all the torrents for the one we just paused
     let new_torrent = queries::TorrentRequestBuilder::default()
         .hash(hash)
         .build()
@@ -154,15 +165,20 @@ async fn test_pause() {
 
     dbg! {&new_torrent};
 
+    // since new_torrent is a vector of all matches, pop off the only one inside it
     let first = new_torrent.unwrap();
     let first = first.get(0).unwrap();
 
+    // check that it did indeep pause
     match first.state() {
         data::State::PausedDL => {}
         data::State::PausedUP => {}
         _ => panic! {"torrent did not pause"},
     }
 
-    #[allow(unused_must_use)]
-    first.hash().resume(&api).await;
+    first
+        .hash()
+        .resume(&api)
+        .await
+        .expect("did not resume torrent");
 }

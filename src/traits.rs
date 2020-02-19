@@ -3,9 +3,7 @@ use async_trait::async_trait;
 use serde::Serialize;
 
 use super::api::Api;
-use super::data::{
-    self, Hash, SerdeHashes, Torrent, TorrentInfo, TorrentInfoSerde, TorrentProperties, Tracker,
-};
+use super::data::*;
 use super::error::Error;
 use super::utils::QueryConcat;
 
@@ -199,8 +197,6 @@ impl Resume<Api> for Vec<Hash> {
     async fn resume(&self, api: &'_ Api) -> Result<(), Error> {
         let hash_url = QueryConcat::query_concat(&self.as_slice(), '|');
 
-        dbg! {&hash_url};
-
         let addr = push_own! {api.address, "/api/v2/torrents/resume?hashes=", &hash_url};
 
         let res = api
@@ -260,8 +256,6 @@ impl Pause<Api> for Vec<Hash> {
         // remove the final | from the string
         hash_url.remove(hash_url.len() - 1);
 
-        dbg! {&hash_url};
-
         let addr = push_own! {api.address, "/api/v2/torrents/pause?hashes=", &hash_url};
 
         let res = api
@@ -298,7 +292,6 @@ impl<'hash, 'tag> TagsUrlHelper<'hash, 'tag> {
 #[async_trait]
 impl Tags<Api, [String]> for Torrent {
     async fn add_tag(&self, api: &'_ Api, tags: &'_ [String]) -> Result<(), Error> {
-        dbg! {"HERERERER 1111"};
         self.hash.add_tag(&api, tags).await
     }
 }
@@ -308,11 +301,9 @@ impl Tags<Api, [String]> for Hash {
     async fn add_tag(&self, api: &'_ Api, tags: &'_ [String]) -> Result<(), Error> {
         let helper = TagsUrlHelper {
             hashes: &[self],
-            tags: tags,
+            tags,
         };
         let addr = push_own! {api.address, "/api/v2/torrents/addTags?", &helper.url()?};
-
-        dbg! {"HERERERE 222"};
 
         let res = api
             .client
@@ -320,7 +311,6 @@ impl Tags<Api, [String]> for Hash {
             .headers(api.make_headers()?)
             .send()
             .await;
-        dbg! {&res};
 
         match res?.error_for_status() {
             Ok(_) => Ok(()),

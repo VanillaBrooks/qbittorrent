@@ -1,11 +1,8 @@
 use super::data::{Hash, Torrent};
 use super::error::{self, Error};
-use reqwest;
-use std::collections::HashMap;
 
 use derive_builder::Builder;
 
-#[macro_use]
 use derive_builder;
 use serde::{Deserialize, Serialize};
 
@@ -78,8 +75,6 @@ impl TorrentRequest {
             }
             Err(e) => return Err(Error::from(e)),
         }
-
-        dbg! {&addr};
 
         let res = api
             .client
