@@ -1,8 +1,8 @@
 //! Structs returned by api queries
 
-use serde::{Deserialize, Serialize};
 use super::utils;
 use derive_getters::Getters;
+use serde::{Deserialize, Serialize};
 
 /// Overall metadata about this qbit client
 // TODO: fix struct definitions
@@ -405,10 +405,15 @@ pub struct Log {
     r#type: u64,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Default)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default, Hash)]
 #[serde(transparent)]
 pub struct Hash {
     pub(crate) hash: String,
+}
+impl Hash {
+    pub fn inner(self) -> String {
+        self.hash
+    }
 }
 
 impl From<String> for Hash {
