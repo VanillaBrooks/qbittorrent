@@ -225,4 +225,49 @@ impl Api {
         headers.insert("cookie", self.cookie.parse()?);
         Ok(headers)
     }
+
+    pub async fn get_all_categories(&self) -> Result<Vec<Categories>, error::Error> {
+        // let addr = push_own!(self.address, "/api/v2/torrents/categories");
+
+        // dbg! {&addr};
+
+        // let res = self
+        //     .client
+        //     .get(&addr)
+        //     .headers(self.make_headers()?)
+        //     .send()
+        //     .await?
+        //     .bytes()
+        //     .await?;
+
+        // dbg! {&res};
+        // let x = serde_json::from_slice(&res)?;
+        // Ok(x)
+
+        unimplemented!()
+    }
+
+    pub async fn add_category(&self, name: &str, path: &str) -> Result<(), error::Error> {
+        let addr = push_own!(
+            self.address,
+            "/api/v2/torrents/createCategory?savePath=",
+            path,
+            "&category=",
+            name
+        );
+
+        dbg! {&addr};
+
+        let res = self
+            .client
+            .get(&addr)
+            .headers(self.make_headers()?)
+            .send()
+            .await?
+            .bytes()
+            .await?;
+        dbg! {res};
+
+        Ok(())
+    }
 }

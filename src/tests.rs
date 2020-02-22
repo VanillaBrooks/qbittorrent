@@ -1,6 +1,8 @@
 use super::api::Api;
 use super::data;
 use super::error::Error;
+use super::queries;
+use super::traits::*;
 use tokio;
 
 fn _is_send<T: Send>(_: T) {}
@@ -70,7 +72,7 @@ async fn add_new_torrent() {
         .urls(magnet)
         .savepath("E:\\Torrents")
         .upload_limit(300)
-        .category("TEST_CAT")
+        .category("add_new_torrent_test_category")
         .sequential_download("true")
         .download_limit(200)
         .build()
@@ -181,4 +183,35 @@ async fn test_pause() {
         .resume(&api)
         .await
         .expect("did not resume torrent");
+}
+
+#[tokio::test]
+async fn set_category() {
+    let (api, torrent) = get_first_torrent().await;
+
+    // wait for add_category test to create this test
+    tokio::time::delay_for(std::time::Duration::from_secs(3)).await;
+
+    dbg! {&torrent};
+    let response = torrent.set_category(&api, "ADD_CATEGORY").await;
+    dbg! {&response};
+    response.unwrap();
+}
+
+#[tokio::test]
+async fn add_category() {
+    let api = default_api().await.unwrap();
+    let response = api.add_category("ADD_CATEGORY", "E:\\testpath").await;
+    dbg! {&response};
+    response.unwrap();
+}
+
+#[tokio::test]
+async fn get_all_categories() {
+    let api = default_api().await.unwrap();
+    let cats = api.get_all_categories().await;
+    dbg! {&cats};
+    cats.unwrap();
+
+    panic! {"force panic"};
 }

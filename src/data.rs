@@ -376,8 +376,12 @@ pub struct TorrentInfo<'a> {
     availability: f64,
 }
 
-#[derive(Debug, Deserialize)]
-pub struct Categories {}
+#[derive(Debug, Deserialize, Default)]
+pub struct Categories {
+    name: String,
+    #[serde(rename = "savePath")]
+    save_path: String,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct ServerState {}

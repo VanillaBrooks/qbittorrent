@@ -16,6 +16,11 @@ pub trait TorrentData<T> {
     async fn contents<'a>(&'a self, other: &'a T) -> Result<Vec<TorrentInfo<'a>>, Error>;
 }
 
+#[async_trait]
+pub trait Category<T> {
+    async fn set_category(&self, other: &'_ T, category: &str) -> Result<(), Error>;
+}
+
 // Resume a torrent
 #[async_trait]
 pub trait Resume<T> {
@@ -32,64 +37,41 @@ pub trait Tags<T, V: ?Sized> {
 }
 
 #[async_trait]
+impl Category<Api> for Torrent {
+    async fn set_category(&self, api: &'_ Api, category: &str) -> Result<(), Error> {
+        let addr = push_own!(
+            api.address,
+            "/api/v2/torrents/setCategory?hashes=",
+            &self.hash,
+            "&category=",
+            category
+        );
+
+        let res = api
+            .client
+            .get(&addr)
+            .headers(api.make_headers()?)
+            .send()
+            .await?
+            .bytes()
+            .await?;
+        dbg! {res};
+
+        Ok(())
+    }
+}
+#[async_trait]
 impl TorrentData<Api> for Torrent {
     async fn properties(&self, api: &'_ Api) -> Result<TorrentProperties, Error> {
-        // let _hash = &self.hash;
-        // let addr = push_own! {api.address, "/api/v2/torrents/properties?hash=", _hash};
-
-        // let res = api
-        //     .client
-        //     .get(&addr)
-        //     .headers(api.make_headers()?)
-        //     .send()
-        //     .await?
-        //     .bytes()
-        //     .await?;
-
-        // let props = serde_json::from_slice(&res)?;
-        // Ok(props)
         self.hash.properties(&api).await
     }
 
     async fn trackers(&self, api: &'_ Api) -> Result<Vec<Tracker>, Error> {
-        // let _hash = &self.hash;
-        // let addr = push_own! {api.address, "/api/v2/torrents/trackers?hash=", _hash};
-
-        // let res = api
-        //     .client
-        //     .get(&addr)
-        //     .headers(api.make_headers()?)
-        //     .send()
-        //     .await?
-        //     .bytes()
-        //     .await?;
-
-        // let trackers = serde_json::from_slice(&res)?;
-        // Ok(trackers)
-
         self.hash.trackers(api).await
     }
 
     async fn contents<'a>(&'a self, api: &'a Api) -> Result<Vec<TorrentInfo<'a>>, Error> {
         self.hash.contents(api).await
-        // let _hash = &self.hash;
-        // let addr = push_own! {api.address, "/api/v2/torrents/files?hash=", _hash};
-
-        // let res = api
-        //     .client
-        //     .get(&addr)
-        //     .headers(api.make_headers()?)
-        //     .send()
-        //     .await?
-        //     .bytes()
-        //     .await?;
-
-        // let info = serde_json::from_slice::<Vec<TorrentInfoSerde>>(&res)?
-        //     .into_iter()
-        //     .map(|x| x.into_info(&self.hash))
-        //     .collect();
-
-        // Ok(info)
     }
 }
 
