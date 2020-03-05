@@ -212,6 +212,4 @@ async fn get_all_categories() {
     let cats = api.get_all_categories().await;
     dbg! {&cats};
     cats.unwrap();
-
-    panic! {"force panic"};
 }

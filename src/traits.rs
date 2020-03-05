@@ -17,6 +17,11 @@ pub trait TorrentData<T> {
 }
 
 #[async_trait]
+pub trait Recheck<T> {
+    async fn recheck(&self, other: &'_ T) -> Result<(), Error>;
+}
+
+#[async_trait]
 pub trait Category<T> {
     async fn set_category(&self, other: &'_ T, category: &str) -> Result<(), Error>;
 }
@@ -365,5 +370,20 @@ impl Tags<Api, [String]> for Vec<Torrent> {
         // }
 
         unimplemented!()
+    }
+}
+
+#[async_trait]
+impl Recheck<Api> for Hash {
+    async fn recheck(&self, api: &'_ Api) -> Result<(), Error> {
+        let addr = push_own!(api.address, "/api/v2/torrents/recheck?hashes=", &self.hash);
+
+        api.client
+            .get(&addr)
+            .headers(api.make_headers()?)
+            .send()
+            .await?;
+
+        Ok(())
     }
 }
