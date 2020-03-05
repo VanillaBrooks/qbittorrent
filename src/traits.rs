@@ -374,7 +374,7 @@ impl Tags<Api, [String]> for Vec<Torrent> {
 }
 
 #[async_trait]
-impl Recheck<Api> for &Hash {
+impl Recheck<Api> for Hash {
     async fn recheck(&self, api: &'_ Api) -> Result<(), Error> {
         let addr = push_own!(api.address, "/api/v2/torrents/recheck?hashes=", &self.hash);
 
@@ -392,14 +392,6 @@ impl Recheck<Api> for &Hash {
 impl Recheck<Api> for Torrent {
     async fn recheck(&self, api: &'_ Api) -> Result<(), Error> {
         self.hash.recheck(api).await?;
-        Ok(())
-    }
-}
-
-#[async_trait]
-impl Recheck<Api> for Hash {
-    async fn recheck(&self, api: &'_ Api) -> Result<(), Error> {
-        &self.recheck(api).await?;
         Ok(())
     }
 }
