@@ -126,7 +126,7 @@ pub struct Torrent {
 pub struct Tracker {
     url: String,
     #[getter(skip)]
-    status: String,
+    status: i32,
     // TODO: fix this since some people do things non standard with "/" here
     // tier: u32,
     num_peers: i32,
@@ -137,16 +137,16 @@ pub struct Tracker {
     msg: String,
 }
 impl Tracker {
-    // pub fn status(&self) -> TrackerStatus {
-    //     match self.status {
-    //         0 => TrackerStatus::TrackerDisabled,
-    //         1 => TrackerStatus::NotContacted,
-    //         2 => TrackerStatus::Working,
-    //         3 => TrackerStatus::Updating,
-    //         4 => TrackerStatus::NotWorking,
-    //         _ => TrackerStatus::UnknownResponse,
-    //     }
-    // }
+    pub fn status(&self) -> TrackerStatus {
+        match self.status {
+            0 => TrackerStatus::TrackerDisabled,
+            1 => TrackerStatus::NotContacted,
+            2 => TrackerStatus::Working,
+            3 => TrackerStatus::Updating,
+            4 => TrackerStatus::NotWorking,
+            _ => TrackerStatus::UnknownResponse,
+        }
+    }
 }
 
 /// Working-status tracker for a particular torrent
