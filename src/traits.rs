@@ -52,14 +52,7 @@ impl Category<Api> for Torrent {
             category
         );
 
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?
-            .bytes()
-            .await?;
+        let res = api.client.get(&addr).send().await?.bytes().await?;
         dbg! {res};
 
         Ok(())
@@ -86,14 +79,7 @@ impl TorrentData<Api> for Hash {
         let _hash = &self.hash;
         let addr = push_own! {api.address, "/api/v2/torrents/properties?hash=", self};
 
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?
-            .bytes()
-            .await?;
+        let res = api.client.get(&addr).send().await?.bytes().await?;
 
         let props = serde_json::from_slice(&res)?;
         Ok(props)
@@ -102,14 +88,7 @@ impl TorrentData<Api> for Hash {
     async fn trackers(&self, api: &'_ Api) -> Result<Vec<Tracker>, Error> {
         let addr = push_own! {api.address, "/api/v2/torrents/trackers?hash=", self};
 
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?
-            .bytes()
-            .await?;
+        let res = api.client.get(&addr).send().await?.bytes().await?;
 
         let trackers = serde_json::from_slice(&res)?;
         Ok(trackers)
@@ -119,14 +98,7 @@ impl TorrentData<Api> for Hash {
         // let _hash = &self.hash;
         let addr = push_own! {api.address, "/api/v2/torrents/files?hash=", self};
 
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?
-            .bytes()
-            .await?;
+        let res = api.client.get(&addr).send().await?.bytes().await?;
 
         let info = serde_json::from_slice::<Vec<TorrentInfoSerde>>(&res)?
             .into_iter()
@@ -165,12 +137,7 @@ impl Resume<Api> for Hash {
         let _hash = &self.hash;
         let addr = push_own! {api.address, "/api/v2/torrents/resume?hashes=", _hash};
 
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?;
+        let res = api.client.get(&addr).send().await?;
 
         match res.error_for_status() {
             Ok(_) => Ok(()),
@@ -186,12 +153,7 @@ impl Resume<Api> for Vec<Hash> {
 
         let addr = push_own! {api.address, "/api/v2/torrents/resume?hashes=", &hash_url};
 
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?;
+        let res = api.client.get(&addr).send().await?;
 
         match res.error_for_status() {
             Ok(_) => Ok(()),
@@ -213,12 +175,7 @@ impl Pause<Api> for Hash {
         let _hash = &self.hash;
         let addr = push_own! {api.address, "/api/v2/torrents/pause?hashes=", _hash};
 
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?;
+        let res = api.client.get(&addr).send().await?;
 
         match res.error_for_status() {
             Ok(_) => Ok(()),
@@ -245,12 +202,7 @@ impl Pause<Api> for Vec<Hash> {
 
         let addr = push_own! {api.address, "/api/v2/torrents/pause?hashes=", &hash_url};
 
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?;
+        let res = api.client.get(&addr).send().await?;
 
         match res.error_for_status() {
             Ok(_) => Ok(()),
@@ -292,12 +244,7 @@ impl Tags<Api, [String]> for Hash {
         };
         let addr = push_own! {api.address, "/api/v2/torrents/addTags?", &helper.url()?};
 
-        let res = api
-            .client
-            .post(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await;
+        let res = api.client.post(&addr).send().await;
 
         match res?.error_for_status() {
             Ok(_) => Ok(()),
@@ -324,7 +271,6 @@ impl Tags<Api, [String]> for Vec<Hash> {
         // let res = api
         //     .client
         //     .post(&addr)
-        //     .headers(api.make_headers()?)
         //     .form(&form)
         //     .send()
         //     .await?;
@@ -359,7 +305,6 @@ impl Tags<Api, [String]> for Vec<Torrent> {
         // let res = api
         //     .client
         //     .post(&addr)
-        //     .headers(api.make_headers()?)
         //     .form(&form)
         //     .send()
         //     .await?;
@@ -378,11 +323,7 @@ impl Recheck<Api> for Hash {
     async fn recheck(&self, api: &'_ Api) -> Result<(), Error> {
         let addr = push_own!(api.address, "/api/v2/torrents/recheck?hashes=", &self.hash);
 
-        api.client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?;
+        api.client.get(&addr).send().await?;
 
         Ok(())
     }

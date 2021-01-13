@@ -76,14 +76,7 @@ impl TorrentRequest {
             Err(e) => return Err(Error::from(e)),
         }
 
-        let res = api
-            .client
-            .get(&addr)
-            .headers(api.make_headers()?)
-            .send()
-            .await?
-            .bytes()
-            .await?;
+        let res = api.client.get(&addr).send().await?.bytes().await?;
 
         let torrents: Vec<Torrent> = serde_json::from_slice(&res)?;
 

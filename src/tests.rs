@@ -3,6 +3,8 @@ use super::data;
 use super::error::Error;
 use super::queries;
 use super::traits::*;
+use anyhow;
+use reqwest::Url;
 use tokio;
 
 fn _is_send<T: Send>(_: T) {}
@@ -10,29 +12,35 @@ fn _is_sync<T: Sync>(_: T) {}
 
 #[tokio::test]
 async fn is_send() {
-    let api = Api::new("", "", "").await;
+    let api = Api::new(true, "", "", Url::parse("").unwrap()).await;
     _is_send(api);
 }
 #[tokio::test]
 async fn is_sync() {
-    let api = Api::new("", "", "").await;
+    let api = Api::new(true, "", "", Url::parse("").unwrap()).await;
     _is_sync(api);
 }
 
 #[tokio::test]
 async fn is_send_ref() {
-    let api = Api::new("", "", "").await;
+    let api = Api::new(true, "", "", Url::parse("").unwrap()).await;
     _is_send(&api);
 }
 #[tokio::test]
 async fn is_sync_ref() {
-    let api = Api::new("", "", "").await;
+    let api = Api::new(true, "", "", Url::parse("").unwrap()).await;
     _is_sync(&api);
 }
 
 #[allow(dead_code)]
-async fn default_api() -> Result<Api, Error> {
-    Api::new("admin", "adminadminadmin", "http://localhost:8080").await
+async fn default_api() -> Result<Api, anyhow::Error> {
+    Api::new(
+        true,
+        "admin",
+        "adminadminadmin",
+        Url::parse("http://localhost:8080")?,
+    )
+    .await
 }
 
 #[allow(dead_code)]
@@ -155,7 +163,7 @@ async fn test_pause() {
     pause.unwrap();
 
     // sleep to give time to pause
-    tokio::time::delay_for(std::time::Duration::from_secs(3)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
     // search through all the torrents for the one we just paused
     let new_torrent = queries::TorrentRequestBuilder::default()
@@ -190,7 +198,7 @@ async fn set_category() {
     let (api, torrent) = get_first_torrent().await;
 
     // wait for add_category test to create this test
-    tokio::time::delay_for(std::time::Duration::from_secs(3)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
     dbg! {&torrent};
     let response = torrent.set_category(&api, "ADD_CATEGORY").await;

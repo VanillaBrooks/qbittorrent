@@ -1,6 +1,7 @@
 //! Structs returned by api queries
 
 use super::utils;
+use super::utils::deserialize_u32_or_empty_string;
 use derive_getters::Getters;
 use serde::{Deserialize, Serialize};
 
@@ -122,18 +123,19 @@ pub struct Torrent {
 /// num_leeches 	integer 	Number of leeches for current torrent, as reported by the tracker
 /// num_downloaded 	integer 	Number of completed downlods for current torrent, as reported by the tracker
 /// msg 	string 	Tracker message (there is no way of knowing what this message is - it's up to tracker admins)
-#[derive(Serialize, Deserialize, Debug, Clone, Getters)]
+#[derive(Deserialize, Debug, Clone, Getters)]
 pub struct Tracker {
     url: String,
     #[getter(skip)]
     status: i32,
     // TODO: fix this since some people do things non standard with "/" here
-    // tier: u32,
+    #[serde(deserialize_with = "deserialize_u32_or_empty_string")]
+    tier: u32,
     num_peers: i32,
     // TODO: documentation says these will be returned but the fields do not appear
-    // num_seeds: i32,
-    // num_leeches: i32,
-    // num_downloaded: i64,
+    num_seeds: i32,
+    num_leeches: i32,
+    num_downloaded: i64,
     msg: String,
 }
 impl Tracker {
@@ -414,6 +416,13 @@ pub struct Log {
 pub struct Hash {
     pub(crate) hash: String,
 }
+
+impl std::fmt::Display for Hash {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.hash)
+    }
+}
+
 impl Hash {
     pub fn inner(self) -> String {
         self.hash
