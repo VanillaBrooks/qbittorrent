@@ -69,7 +69,7 @@ Features of this library are implemented as-needed. If you require certain metho
         ❌ Add new category
         ❌ Edit category
         ❌ Remove categories
-        ❌ Add torrent tags
+        ✅ Add torrent tags
         ❌ Remove torrent tags
         ❌ Get all tags
         ❌ Create tags

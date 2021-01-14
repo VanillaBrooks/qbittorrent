@@ -10,12 +10,17 @@ license = "MIT"
 
 [dependencies]
 
-serde = {version = "1.0.104", features= ["serde_derive"]}
-serde_json = "1.0.44"
+serde = { version = "1.0.118", features = ["serde_derive"] }
+serde_json = "1.0.61"
 derive_builder = "0.9.0"
-reqwest = {version = "0.10.1", features = ["json"]}
-tokio = {version=  "0.2.9", features=["macros"]}
-serde_urlencoded = "0.6.1"
-derive-getters = "0.1.0"
-async-trait = "0.1.22"
-thiserror = "1.0.11"
+reqwest = { version = "0.11.0", features = ["json", "cookies"] }
+tokio = { version = "1.0.1", features = ["macros", "time"] }
+serde_urlencoded = "0.7.0"
+derive-getters = "0.2.0"
+async-trait = "0.1.42"
+thiserror = "1.0.23"
+clap = "2.33.3"
+base64 = "0.13.0"
+percent-encoding = "2.1.0"
+anyhow = "1.0.38"
+futures = "0.3.9"

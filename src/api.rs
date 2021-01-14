@@ -1,48 +1,79 @@
-use reqwest;
+use anyhow::{self, bail};
+use reqwest::{self, header, Client, StatusCode, Url};
 use serde_json;
+use std::sync::Arc;
+
+use base64::write::EncoderWriter as Base64Encoder;
+use percent_encoding::{percent_encode, NON_ALPHANUMERIC};
+use std::io::Write;
 
 // TODO: fix these to specifics
 use super::data::*;
 use super::error;
 use super::queries::*;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Api {
-    pub(crate) cookie: String,
-    pub(crate) address: String,
+    pub(crate) address: Url,
     pub(crate) client: reqwest::Client,
 }
 
 impl Api {
-    pub async fn new(username: &str, password: &str, address: &str) -> Result<Self, error::Error> {
-        let client = reqwest::Client::new();
-
+    pub async fn new(
+        basic_auth: bool,
+        username: &str,
+        password: &str,
+        address: Url,
+    ) -> Result<Self, anyhow::Error> {
         let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("Referer", address.parse()?);
+        headers.insert("Referer", address.as_str().parse()?);
+        headers.insert("Origin", address.origin().ascii_serialization().parse()?);
+        headers.insert("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.2 Safari/605.1.15".parse()?);
 
-        let addr = push_own! {address, "/api/v2/auth/login", "?username=", username, "&password=", password};
-        let response = client.get(&addr).headers(headers).send().await?;
+        if basic_auth {
+            let mut header_value = b"Basic ".to_vec();
+            {
+                let mut encoder = Base64Encoder::new(&mut header_value, base64::STANDARD);
+                write!(encoder, "{}:", username)?;
+                write!(encoder, "{}", password)?;
+            }
+            headers.insert(
+                header::AUTHORIZATION,
+                header::HeaderValue::from_bytes(&header_value)?,
+            );
+        }
 
-        let headers = match response.headers().get("set-cookie") {
-            Some(header) => header,
-            None => return Err(error::Error::MissingHeaders),
-        };
+        let client = Client::builder()
+            .cookie_store(true)
+            .default_headers(headers)
+            .build()?;
 
-        let cookie_str = headers.to_str()?;
-        let cookie_header = match cookie_str.find(";") {
-            Some(index) => index,
-            None => return Err(error::Error::MissingCookie),
-        };
+        let addr = push_own! {address, "/api/v2/auth/login"};
 
-        // parse off the "SID=" portion of the cookie
-        let cookie = match cookie_str.get(0..cookie_header) {
-            Some(cookie) => cookie,
-            None => return Err(error::Error::SliceError),
-        };
+        let response = client
+            .post(&addr)
+            .body(format!(
+                "username={}&password={}",
+                percent_encode(username.as_bytes(), NON_ALPHANUMERIC),
+                percent_encode(password.as_bytes(), NON_ALPHANUMERIC)
+            ))
+            .header(
+                header::CONTENT_TYPE,
+                "application/x-www-form-urlencoded; charset=UTF-8",
+            )
+            .send()
+            .await?;
+
+        if response.status() != StatusCode::OK {
+            bail!(
+                "Cannot authenticate to qbittorrent: {status} {body}",
+                status = response.status(),
+                body = response.text().await?,
+            );
+        }
 
         Ok(Self {
-            cookie: cookie.to_string(),
-            address: address.to_string(),
+            address: address,
             client,
         })
     }
@@ -184,46 +215,32 @@ impl Api {
     pub async fn get_torrent_list(&self) -> Result<Vec<Torrent>, error::Error> {
         let addr = push_own! {self.address, "/api/v2/torrents/info"};
 
-        let res = self
-            .client
-            .get(&addr)
-            .headers(self.make_headers()?)
-            .send()
-            .await?
-            .bytes()
-            .await?;
+        let res = self.client.get(&addr).send().await?.bytes().await?;
 
         let all_torrents: Vec<Torrent> = serde_json::from_slice(&res)?;
 
         Ok(all_torrents)
     }
 
+    pub async fn get_trackers(&self, info_hash: &str) -> Result<Vec<Tracker>, anyhow::Error> {
+        let addr = push_own! {self.address, "/api/v2/torrents/trackers", "?hash=", info_hash};
+
+        let res = self.client.get(&addr).send().await?.bytes().await?;
+
+        let trackers: Vec<Tracker> = serde_json::from_slice(&res)?;
+
+        Ok(trackers)
+    }
+
     pub async fn add_new_torrent(&self, data: &TorrentDownload) -> Result<(), error::Error> {
         let addr = push_own! {self.address, "/api/v2/torrents/add"};
 
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("cookie", self.cookie.parse()?);
-        headers.insert("Referer", self.address.parse()?);
-
-        let res = self
-            .client
-            .post(&addr)
-            .form(data)
-            .headers(headers)
-            .send()
-            .await?;
+        let res = self.client.post(&addr).form(data).send().await?;
 
         match res.error_for_status() {
             Ok(_) => Ok(()),
             Err(e) => Err(error::Error::from(e)),
         }
-    }
-
-    /// Make the authentication headers for each request
-    pub(crate) fn make_headers(&self) -> Result<reqwest::header::HeaderMap, error::Error> {
-        let mut headers = reqwest::header::HeaderMap::new();
-        headers.insert("cookie", self.cookie.parse()?);
-        Ok(headers)
     }
 
     pub async fn get_all_categories(&self) -> Result<Vec<Categories>, error::Error> {
@@ -234,7 +251,6 @@ impl Api {
         // let res = self
         //     .client
         //     .get(&addr)
-        //     .headers(self.make_headers()?)
         //     .send()
         //     .await?
         //     .bytes()
@@ -256,17 +272,95 @@ impl Api {
             name
         );
 
-        dbg! {&addr};
+        let res = self.client.get(&addr).send().await?.bytes().await?;
 
-        let res = self
+        Ok(())
+    }
+
+    pub async fn add_tag(&self, hashes: Vec<&str>, tag: &str) -> Result<(), anyhow::Error> {
+        println!("Tagging {} torrents...", hashes.len());
+        let addr = push_own! {self.address, "/api/v2/torrents/addTags"};
+        let hashes_query = hashes.join("|");
+        let body = format!(
+            "hashes={hashes}&tags={tag}",
+            hashes = hashes_query,
+            tag = percent_encode(tag.as_bytes(), NON_ALPHANUMERIC)
+        );
+
+        let response = self
             .client
-            .get(&addr)
-            .headers(self.make_headers()?)
+            .post(&addr)
+            .header(header::CONTENT_TYPE, "application/x-www-form-urlencoded")
+            .body(body)
             .send()
-            .await?
-            .bytes()
             .await?;
-        dbg! {res};
+
+        if response.status() != StatusCode::OK {
+            bail!(
+                "Cannot tag torrents: {status} {body}",
+                status = response.status(),
+                body = response.text().await?,
+            );
+        }
+
+        Ok(())
+    }
+
+    pub async fn tag_error_trackers(&self, tag: &str, all: bool) -> Result<(), anyhow::Error> {
+        let torrents = self.get_torrent_list().await.unwrap();
+
+        let mut handles = vec![];
+        let sem = Arc::new(tokio::sync::Semaphore::new(20));
+        for torrent in torrents {
+            let api = self.clone();
+            let permit = Arc::clone(&sem).acquire_owned().await;
+            handles.push(tokio::spawn(async move {
+                let _permit = permit;
+                let hash = torrent.hash();
+                let name = torrent.name();
+                let trackers = api.get_trackers(hash).await.expect(
+                    &format!(
+                        "Cannot get trackers from: [{hash}] {name}",
+                        hash = hash,
+                        name = name
+                    )[..],
+                );
+
+                for tracker in trackers {
+                    match tracker.status() {
+                        TrackerStatus::TrackerDisabled | TrackerStatus::Working => continue,
+                        _ => {
+                            if tracker.msg().len() > 0 || all {
+                                println!(
+                                    "[{hash}]({status:?}) {name} ({msg})",
+                                    hash = hash,
+                                    status = tracker.status(),
+                                    name = name,
+                                    msg = tracker.msg()
+                                );
+                                return Some(hash.clone());
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+                }
+
+                None
+            }));
+        }
+        let results = futures::future::join_all(handles).await;
+
+        let results: Vec<String> = results
+            .into_iter()
+            .filter_map(Result::ok)
+            .filter(|x| x.is_some())
+            .map(|x| x.unwrap().hash)
+            .collect();
+
+        let hashes: Vec<&str> = results.iter().map(|s| &**s).collect();
+
+        self.add_tag(hashes, tag).await?;
 
         Ok(())
     }
