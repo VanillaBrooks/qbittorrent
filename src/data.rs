@@ -73,7 +73,7 @@ pub struct Torrent {
     auto_tmm: bool,
     category: String,
     completed: i64,
-    completion_on: u32,
+    completion_on: i64,
     dl_limit: i64,
     dlspeed: i64,
     downloaded: i64,
