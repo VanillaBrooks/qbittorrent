@@ -9,6 +9,8 @@ use super::queries::*;
 
 #[derive(Debug)]
 /// Main handle and access point to working with qbittorrent
+///
+/// Full documentation on provided methods is available here [here](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1))
 pub struct Api {
     pub(crate) cookie: String,
     pub(crate) address: String,
