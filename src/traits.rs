@@ -17,26 +17,30 @@ pub trait TorrentData<T> {
 }
 
 #[async_trait]
+/// Assist in forcing a torrent recheck
 pub trait Recheck<T> {
     async fn recheck(&self, other: &'_ T) -> Result<(), Error>;
 }
 
 #[async_trait]
+/// Assist in setting a category for a torrent
 pub trait Category<T> {
     async fn set_category(&self, other: &'_ T, category: &str) -> Result<(), Error>;
 }
 
-// Resume a torrent
 #[async_trait]
+/// Resume a torrent
 pub trait Resume<T> {
     async fn resume(&self, other: &'_ T) -> Result<(), Error>;
 }
 #[async_trait]
+/// Pause a torrent
 pub trait Pause<T> {
     async fn pause(&self, other: &'_ T) -> Result<(), Error>;
 }
 
 #[async_trait]
+/// Add a tag to a torrent
 pub trait Tags<T, V: ?Sized> {
     async fn add_tag(&self, other: &'_ T, tags: &'_ V) -> Result<(), Error>;
 }
@@ -65,6 +69,7 @@ impl Category<Api> for Torrent {
         Ok(())
     }
 }
+
 #[async_trait]
 impl TorrentData<Api> for Torrent {
     async fn properties(&self, api: &'_ Api) -> Result<TorrentProperties, Error> {
@@ -116,7 +121,6 @@ impl TorrentData<Api> for Hash {
     }
 
     async fn contents<'a>(&'a self, api: &'a Api) -> Result<Vec<TorrentInfo<'a>>, Error> {
-        // let _hash = &self.hash;
         let addr = push_own! {api.address, "/api/v2/torrents/files?hash=", self};
 
         let res = api
@@ -264,6 +268,7 @@ struct TagsUrlHelper<'hash, 'tag> {
     hashes: &'hash [&'hash Hash],
     tags: &'tag [String],
 }
+
 impl<'hash, 'tag> TagsUrlHelper<'hash, 'tag> {
     fn url(self) -> Result<String, Error> {
         let mut url = String::with_capacity(25);
@@ -303,73 +308,6 @@ impl Tags<Api, [String]> for Hash {
             Ok(_) => Ok(()),
             Err(e) => Err(Error::from(e)),
         }
-    }
-}
-
-#[async_trait]
-impl Tags<Api, [String]> for Vec<Hash> {
-    async fn add_tag(&self, api: &'_ Api, tags: &'_ [String]) -> Result<(), Error> {
-        // let addr = push_own! {api.address, "/api/v2/torrents/addTags"};
-
-        // let _tags = QueryConcat::query_concat(&tags);
-        // let form = serde_json::json! {
-        //     {
-        //         "hashes" : QueryConcat::query_concat(&self.as_slice()),
-        //         "tags" : _tags
-        //     }
-        // };
-
-        // dbg!{&form};
-
-        // let res = api
-        //     .client
-        //     .post(&addr)
-        //     .headers(api.make_headers()?)
-        //     .form(&form)
-        //     .send()
-        //     .await?;
-
-        // match res.error_for_status() {
-        //     Ok(_) => Ok(()),
-        //     Err(e) => Err(Error::from(e)),
-        // }
-
-        unimplemented!()
-    }
-}
-#[async_trait]
-impl Tags<Api, [String]> for Vec<Torrent> {
-    async fn add_tag(&self, api: &'_ Api, tags: &'_ [String]) -> Result<(), Error> {
-        // let addr = push_own! {api.address, "/api/v2/torrents/addTags"};
-
-        // // let _tags = QueryConcat::query_concat(&tags);
-        // // pull hashes from the torrents
-        // let hashes = self
-        //     .iter()
-        //     .map(|x| x.hash.to_string())
-        //     .collect::<Vec<String>>();
-
-        // let form = serde_json::json! {
-        //     {
-        //         "hashes" : QueryConcat::query_concat(&hashes.as_slice()),
-        //         "tags" : _tags
-        //     }
-        // };
-
-        // let res = api
-        //     .client
-        //     .post(&addr)
-        //     .headers(api.make_headers()?)
-        //     .form(&form)
-        //     .send()
-        //     .await?;
-
-        // match res.error_for_status() {
-        //     Ok(_) => Ok(()),
-        //     Err(e) => Err(Error::from(e)),
-        // }
-
-        unimplemented!()
     }
 }
 

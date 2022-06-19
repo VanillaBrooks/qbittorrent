@@ -15,10 +15,12 @@ pub enum Error {
     SerdeUrl(#[from] serde_urlencoded::ser::Error),
     #[error("Header value was malformed: {0}")]
     HeaderError(#[from] reqwest::header::InvalidHeaderValue),
-    #[error("Header value was not correctly set")]
+    #[error("Header value was not correctly set - are your username and password correct?")]
     MissingHeaders,
     #[error("Cookie value was not correctly set")]
     MissingCookie,
     #[error("SLICE ERROR ??")]
     SliceError,
+    #[error("Bad response from server")]
+    BadResponse,
 }

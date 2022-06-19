@@ -22,6 +22,7 @@ pub struct MainData {
 
 /// generic torrent information returned from get_all_torrents()
 ///
+/// ```norust
 /// added_on 	integer 	Time (Unix Epoch) when the torrent was added to the client
 /// amount_left 	integer 	Amount of data left to download (bytes)
 /// auto_tmm 	bool 	Whether this torrent is managed by Automatic Torrent Management
@@ -64,6 +65,7 @@ pub struct MainData {
 /// uploaded 	integer 	Amount of data uploaded
 /// uploaded_session 	integer 	Amount of data uploaded this session
 /// upspeed 	integer 	Torrent upload speed (bytes/s)
+/// ```
 
 #[derive(Debug, Deserialize, Getters, Clone)]
 pub struct Torrent {
@@ -114,6 +116,7 @@ pub struct Torrent {
 
 /// Trackers associated with a torrent
 ///
+/// ```norust
 /// url 	string 	Tracker url
 /// status 	integer 	Tracker status. See the table below for possible values
 /// tier 	integer 	Tracker priority tier. Lower tier trackers are tried before higher tiers
@@ -122,6 +125,7 @@ pub struct Torrent {
 /// num_leeches 	integer 	Number of leeches for current torrent, as reported by the tracker
 /// num_downloaded 	integer 	Number of completed downlods for current torrent, as reported by the tracker
 /// msg 	string 	Tracker message (there is no way of knowing what this message is - it's up to tracker admins)
+/// ```
 #[derive(Serialize, Deserialize, Debug, Clone, Getters)]
 pub struct Tracker {
     url: String,
@@ -162,6 +166,7 @@ pub enum TrackerStatus {
 
 /// Metadata about a torrent. returned from Torrent::properties()
 ///
+/// ```norust
 /// save_path 	string 	Torrent save path
 /// creation_date 	integer 	Torrent creation date (Unix timestamp)
 /// piece_size 	integer 	Torrent piece size (bytes)
@@ -195,6 +200,7 @@ pub enum TrackerStatus {
 /// total_size API4 	integer 	Torrent total size (bytes)
 /// up_speed_avg API4 	integer 	Torrent average upload speed (bytes/second)
 /// up_speed API4 	integer 	Torrent upload speed (bytes/second)
+/// ```
 #[derive(Clone, Debug, Deserialize, Serialize, Getters)]
 pub struct TorrentProperties {
     save_path: String,
@@ -234,6 +240,7 @@ pub struct TorrentProperties {
 
 /// Current status of a torrent (downloading, errored, puased, etc)
 ///
+/// ```norust
 /// error 	Some error occurred, applies to paused torrents
 /// missingFiles 	Torrent data files is missing
 /// uploading 	Torrent is being seeded and data is being transferred
@@ -253,6 +260,7 @@ pub struct TorrentProperties {
 /// checkingResumeData 	Checking resume data on qBt startup
 /// moving 	Torrent is moving to another location
 /// unknown 	Unknown status
+/// ```
 #[derive(Debug, Deserialize, Clone)]
 pub enum State {
     #[serde(rename = "error")]
@@ -297,6 +305,7 @@ pub enum State {
 
 /// Transfer stats for a torrent
 ///
+/// ```norust
 /// dl_info_speed 	integer 	Global download rate (bytes/s)
 /// dl_info_data 	integer 	Data downloaded this session (bytes)
 /// up_info_speed 	integer 	Global upload rate (bytes/s)
@@ -305,6 +314,7 @@ pub enum State {
 /// up_rate_limit 	integer 	Upload rate limit (bytes/s)
 /// dht_nodes 	integer 	DHT nodes connected to
 /// connection_status 	string 	Connection status. See possible values here below
+/// ```
 #[derive(Debug, Deserialize, Getters)]
 pub struct TransferInfo {
     dl_info_speed: u64,
@@ -317,22 +327,28 @@ pub struct TransferInfo {
     connection_status: ConnectionStatus,
 }
 
-/// Individual torrent connection status
+/// Individual / Global torrent connection status
 ///
 /// Possible values of connection_status:
+/// ```norust
 /// Value
 /// connected
 /// firewalled
 /// disconnected
+/// ```
 #[derive(Debug, Deserialize)]
 pub enum ConnectionStatus {
+    #[serde(rename="connected")]
     Connected,
+    #[serde(rename="firewalled")]
     Firewalled,
+    #[serde(rename="disconnected")]
     Disconnected,
 }
 
 /// top-level torrent information
 ///
+/// ```norust
 /// name 	string 	File name (including relative path)
 /// size 	integer 	File size (bytes)
 /// progress 	float 	File progress (percentage/100)
@@ -340,6 +356,7 @@ pub enum ConnectionStatus {
 /// is_seed 	bool 	True if file is seeding/complete
 /// piece_range 	integer array 	The first number is the starting piece index and the second number is the ending piece index (inclusive)
 /// availability 	float 	Percentage of file pieces currently available
+/// ```
 #[derive(Debug, Deserialize, Serialize)]
 pub(crate) struct TorrentInfoSerde {
     name: String,
@@ -364,6 +381,44 @@ impl<'a> TorrentInfoSerde {
         }
     }
 }
+
+/// Data on what the current download speeds and throttles are 
+// dl_info_speed 	integer 	Global download rate (bytes/s)
+// dl_info_data 	integer 	Data downloaded this session (bytes)
+// up_info_speed 	integer 	Global upload rate (bytes/s)
+// up_info_data 	integer 	Data uploaded this session (bytes)
+// dl_rate_limit 	integer 	Download rate limit (bytes/s)
+// up_rate_limit 	integer 	Upload rate limit (bytes/s)
+// dht_nodes 	integer 	DHT nodes connected to
+// connection_status 	string 	Connection status. See possible values here belowpub(crate) struct GlobalTransferInfo { }
+#[derive(Debug, Deserialize, Getters)]
+pub struct GlobalTransferInfo {
+    /// Global download rate (bytes/s)
+    dl_info_speed: i64,
+    /// Data downloaded this session (bytes)
+    dl_info_data: i64,
+    /// Global upload rate (bytes/s)
+    up_info_speed: i64,
+    /// Data uploaded this session (bytes)
+    up_info_data: i64,
+    /// Download rate limit (bytes/s)
+    dl_rate_limit: i64,
+    /// Upload rate limit (bytes/s)
+    up_rate_limit: i64,
+    /// DHT nodes connected to
+    dht_nodes: i64,
+    connection_status: ConnectionStatus
+}
+
+/// Whether or not alternat speed limits are enabled
+#[derive(Debug)]
+pub enum AlternateLimits {
+    /// Alternative limits are in effect
+    Enabled,
+    /// Run at full speed 
+    Disabled
+}
+
 #[derive(Debug, Serialize, Getters)]
 pub struct TorrentInfo<'a> {
     hash: &'a Hash,
@@ -376,7 +431,7 @@ pub struct TorrentInfo<'a> {
     availability: f64,
 }
 
-#[derive(Debug, Deserialize, Default)]
+#[derive(Debug, Deserialize, Default, Getters)]
 pub struct Categories {
     name: String,
     #[serde(rename = "savePath")]
@@ -389,7 +444,7 @@ pub struct ServerState {}
 #[derive(Debug, Deserialize)]
 pub struct Peer {}
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Getters)]
 pub struct BuildInfo {
     qt: String,
     libtorrent: String,
@@ -401,7 +456,7 @@ pub struct BuildInfo {
 #[derive(Deserialize, Debug)]
 pub struct Preferences {}
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Getters)]
 pub struct Log {
     id: u64,
     message: String,

@@ -1,3 +1,5 @@
+//! data types for filtering and querying information from qbittorrent
+
 use super::data::{Hash, Torrent};
 use super::error::{self, Error};
 
@@ -92,6 +94,7 @@ impl TorrentRequest {
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone)]
+/// Filtering enum for use in making a `TorrentRequest`
 pub enum TorrentFilter {
     #[serde(rename = "all")]
     All,

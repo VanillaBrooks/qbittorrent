@@ -1,5 +1,6 @@
 use reqwest;
 use serde_json;
+use std::collections::BTreeMap;
 
 // TODO: fix these to specifics
 use super::data::*;
@@ -7,6 +8,9 @@ use super::error;
 use super::queries::*;
 
 #[derive(Debug)]
+/// Main handle and access point to working with qbittorrent
+///
+/// Full documentation on provided methods is available here [here](https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1))
 pub struct Api {
     pub(crate) cookie: String,
     pub(crate) address: String,
@@ -80,21 +84,6 @@ impl Api {
         Ok(())
     }
 
-    // TODO: make struct
-    pub async fn preferences(&self) -> Result<Preferences, error::Error> {
-        let addr = push_own! {self.address, "/api/v2/app/preferences"};
-
-        let res = self.client.get(&addr).send().await?.bytes().await?;
-        let pref = serde_json::from_slice(&res)?;
-
-        unimplemented!()
-        // Ok(pref)
-    }
-
-    pub fn set_preferences(&self) -> Result<(), error::Error> {
-        unimplemented!()
-    }
-
     pub async fn default_save_path(&self) -> Result<String, error::Error> {
         let addr = push_own! {self.address, "/api/v2/app/defaultSavePath"};
 
@@ -119,17 +108,10 @@ impl Api {
         Ok(log)
     }
 
-    pub fn get_peer_log(&self) -> Result<Vec<Peer>, error::Error> {
-        unimplemented!()
-    }
 
     // #####
     // ##### Sync
     // #####
-
-    pub fn get_main_data(&self) -> Result<MainData, error::Error> {
-        unimplemented!()
-    }
 
     // get_torrent_peers is a trait
 
@@ -139,12 +121,40 @@ impl Api {
 
     // /api/v2/transfer/methodName
 
-    pub fn get_global_transfer_info(&self) -> Result<(), ()> {
-        unimplemented!()
+    pub async fn get_global_transfer_info(&self) -> Result<GlobalTransferInfo, error::Error> {
+        let addr = push_own! {self.address, "/api/v2/transfer/info"};
+
+        let res = self
+            .client
+            .get(&addr)
+            .headers(self.make_headers()?)
+            .send()
+            .await?
+            .bytes()
+            .await?;
+
+        let x = serde_json::from_slice(&res)?;
+        Ok(x)
     }
 
-    pub fn get_alternate_speed_limits_state(&self) -> Result<(), error::Error> {
-        unimplemented!()
+    pub async fn get_alternate_speed_limits_state(&self) -> Result<AlternateLimits, error::Error> {
+        let addr = push_own! {self.address, "/api/v2/transfer/speedLimitsMode"};
+        let res = self
+            .client
+            .get(&addr)
+            .headers(self.make_headers()?)
+            .send()
+            .await?
+            .bytes()
+            .await?;
+
+        if res.as_ref() == b"1" {
+            Ok(AlternateLimits::Enabled)
+        } else if res.as_ref() == b"0" {
+            Ok(AlternateLimits::Disabled)
+        } else {
+            Err(error::Error::BadResponse)
+        }
     }
 
     pub async fn toggle_alternative_speed_limits(&self) -> Result<(), error::Error> {
@@ -156,26 +166,6 @@ impl Api {
             Ok(_) => Ok(()),
             Err(e) => Err(error::Error::from(e)),
         }
-    }
-
-    pub fn set_alternate_speed_limits_state(&self) -> Result<(), error::Error> {
-        unimplemented!()
-    }
-
-    pub fn get_global_donwload_limit(&self) -> Result<(), error::Error> {
-        unimplemented!()
-    }
-
-    pub fn set_global_download_limit(&self) -> Result<(), error::Error> {
-        unimplemented!()
-    }
-
-    pub fn get_global_upload_limit(&self) -> Result<(), error::Error> {
-        unimplemented!()
-    }
-
-    pub fn set_global_upload_limit(&self) -> Result<(), error::Error> {
-        unimplemented!()
     }
 
     // ban_peers is a trait
@@ -226,25 +216,21 @@ impl Api {
         Ok(headers)
     }
 
-    pub async fn get_all_categories(&self) -> Result<Vec<Categories>, error::Error> {
-        // let addr = push_own!(self.address, "/api/v2/torrents/categories");
+    /// list all categories that currently exist
+    pub async fn get_all_categories(&self) -> Result<BTreeMap<String, Categories>, error::Error> {
+        let addr = push_own!(self.address, "/api/v2/torrents/categories");
 
-        // dbg! {&addr};
+        let res = self
+            .client
+            .get(&addr)
+            .headers(self.make_headers()?)
+            .send()
+            .await?
+            .bytes()
+            .await?;
 
-        // let res = self
-        //     .client
-        //     .get(&addr)
-        //     .headers(self.make_headers()?)
-        //     .send()
-        //     .await?
-        //     .bytes()
-        //     .await?;
-
-        // dbg! {&res};
-        // let x = serde_json::from_slice(&res)?;
-        // Ok(x)
-
-        unimplemented!()
+        let x = serde_json::from_slice(&res)?;
+        Ok(x)
     }
 
     pub async fn add_category(&self, name: &str, path: &str) -> Result<(), error::Error> {
