@@ -6,6 +6,12 @@ This is an asynchronous api library for the popular bittorrent client qbittorren
 
 Features of this library are implemented as-needed. If you require certain methods create an issue or submit a pull request. 
 
+## Example
+
+```rust,ignore
+use qbittorrent::adsf
+```
+
 ## Progress
 
     Authentication
@@ -26,8 +32,8 @@ Features of this library are implemented as-needed. If you require certain metho
         ✅ Get main data
         Get torrent peers data
     Transfer info
-        ❌ Get global transfer info
-        ❌ Get alternative speed limits state
+        ✅ Get global transfer info
+        ✅ Get alternative speed limits state
         ✅ Toggle alternative speed limits
         ❌ Get global download limit
         ❌ Set global download limit
@@ -65,7 +71,7 @@ Features of this library are implemented as-needed. If you require certain metho
         ❌ Set torrent location
         ❌ Set torrent name
         ❌ Set torrent category
-        ❌ Get all categories
+        ✅ Get all categories
         ❌ Add new category
         ❌ Edit category
         ❌ Remove categories

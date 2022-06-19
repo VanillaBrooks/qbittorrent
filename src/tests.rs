@@ -32,7 +32,7 @@ async fn is_sync_ref() {
 
 #[allow(dead_code)]
 async fn default_api() -> Result<Api, Error> {
-    Api::new("admin", "adminadminadmin", "http://localhost:8080").await
+    Api::new("admin", "adminadmin", "http://localhost:8080").await
 }
 
 #[allow(dead_code)]
@@ -137,15 +137,10 @@ async fn test_pause() {
 
     // filter the list of torrents for one that is actively uploading but not forced
     let torrent = {
-        let mut temp = torrents
+        torrents
             .into_iter()
-            .filter(|x| match x.state() {
-                data::State::Uploading => true,
-                _ => false,
-            })
-            .collect::<Vec<_>>();
-
-        temp.remove(0)
+            .next()
+            .unwrap()
     };
 
     dbg! {&torrent};
@@ -155,7 +150,7 @@ async fn test_pause() {
     pause.unwrap();
 
     // sleep to give time to pause
-    tokio::time::delay_for(std::time::Duration::from_secs(3)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
     // search through all the torrents for the one we just paused
     let new_torrent = queries::TorrentRequestBuilder::default()
@@ -190,7 +185,7 @@ async fn set_category() {
     let (api, torrent) = get_first_torrent().await;
 
     // wait for add_category test to create this test
-    tokio::time::delay_for(std::time::Duration::from_secs(3)).await;
+    tokio::time::sleep(std::time::Duration::from_secs(3)).await;
 
     dbg! {&torrent};
     let response = torrent.set_category(&api, "ADD_CATEGORY").await;
@@ -210,6 +205,22 @@ async fn add_category() {
 async fn get_all_categories() {
     let api = default_api().await.unwrap();
     let cats = api.get_all_categories().await;
+    dbg! {&cats};
+    cats.unwrap();
+}
+
+#[tokio::test]
+async fn get_global_transfer_info() {
+    let api = default_api().await.unwrap();
+    let cats = api.get_global_transfer_info().await;
+    dbg! {&cats};
+    cats.unwrap();
+}
+
+#[tokio::test]
+async fn get_alternate_speed_limits_state() {
+    let api = default_api().await.unwrap();
+    let cats = api.get_alternate_speed_limits_state().await;
     dbg! {&cats};
     cats.unwrap();
 }

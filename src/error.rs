@@ -21,4 +21,6 @@ pub enum Error {
     MissingCookie,
     #[error("SLICE ERROR ??")]
     SliceError,
+    #[error("Bad response from server")]
+    BadResponse,
 }

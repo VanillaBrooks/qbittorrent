@@ -6,9 +6,12 @@ pub(crate) mod utils;
 
 pub mod api;
 pub mod data;
-pub mod error;
+mod error;
 pub mod queries;
-pub(crate) mod tests;
 pub mod traits;
 
+#[cfg(test)]
+pub(crate) mod tests;
+
 pub use api::Api;
+pub use error::Error;
