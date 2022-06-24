@@ -4,6 +4,7 @@ version = "0.2.0"
 authors = ["VanillaBrooks <brooks@karlik.org>"]
 edition = "2018"
 description = "qbittorrent web api implementation"
+repository = "https://github.com/VanillaBrooks/qbittorrent"
 license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
